@@ -1,0 +1,96 @@
+\documentclass[11pt,a4paper,twocolumn]{article}
+\usepackage[english,greek]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{nimbusserif}
+\usepackage[T1]{fontenc}
+\usepackage[left=1.50cm, right=1.50cm, top=2.00cm, bottom=2.00cm]{geometry}
+\usepackage{amsmath}
+\let\myBbbk\Bbbk
+\let\Bbbk\relax
+\usepackage[amsbb,subscriptcorrection,zswash,mtpcal,mtphrb,mtpfrak]{mtpro2}
+\usepackage{graphicx,multicol,multirow,enumitem,tabularx,mathimatika,gensymb,venndiagram,hhline,longtable,tkz-euclide,fontawesome5,eurosym,tcolorbox,tabularray}
+\definecolor{xrwma}{HTML}{C90000}
+\usepackage[explicit]{titlesec}
+\tcbuselibrary{skins,theorems,breakable}
+\newlist{rlist}{enumerate}{3}
+\setlist[rlist]{itemsep=0mm,label=\roman*.}
+\newlist{alist}{enumerate}{3}
+\setlist[alist]{itemsep=0mm,label=\alph*.}
+\newlist{balist}{enumerate}{3}
+\setlist[balist]{itemsep=0mm,label=\bf\alph*.}
+\newlist{Alist}{enumerate}{3}
+\setlist[Alist]{itemsep=0mm,label=\Alph*.}
+\newlist{bAlist}{enumerate}{3}
+\setlist[bAlist]{itemsep=0mm,label=\bf\Alph*.}
+\newlist{askhseis}{enumerate}{3}
+\setlist[askhseis]{label={\Large\thesection}.\arabic*.}
+\renewcommand{\textstigma}{\textsigma\texttau}
+\newlist{thema}{enumerate}{3}
+\setlist[thema]{label=\bf\large{ΘΕΜΑ \textcolor{black}{\Alph*}},itemsep=0mm,leftmargin=0cm,itemindent=18mm}
+\newlist{erwthma}{enumerate}{3}
+\setlist[erwthma]{label=\bf{\large{\textcolor{black}{\Alph{themai}.\arabic*}}},itemsep=0mm,leftmargin=0.8cm}
+
+\newcommand{\kerkissans}[1]{{\fontfamily{maksf}\selectfont \textbf{#1}}}
+\renewcommand{\textdexiakeraia}{}
+
+\usepackage[
+backend=biber,
+style=alphabetic,
+sorting=ynt
+]{biblatex}
+
+\DeclareTblrTemplate{caption}{nocaptemplate}{}
+\DeclareTblrTemplate{capcont}{nocaptemplate}{}
+\DeclareTblrTemplate{contfoot}{nocaptemplate}{}
+\NewTblrTheme{mytabletheme}{
+\SetTblrTemplate{caption}{nocaptemplate}{}
+\SetTblrTemplate{capcont}{nocaptemplate}{}
+\SetTblrTemplate{contfoot}{nocaptemplate}{}
+}
+
+\NewTblrEnviron{mytblr}
+\SetTblrStyle{firsthead}{font=\bfseries}
+\SetTblrStyle{firstfoot}{fg=red2}
+\SetTblrOuter[mytblr]{theme=mytabletheme}
+\SetTblrInner[mytblr]{
+rowspec={t{7mm}},columns = {c},
+width = 0.85\linewidth,
+row{odd} = {bg=red9,fg=black,ht=8mm},
+row{even} = {bg=red7,fg=black,ht=8mm},
+hlines={white},vlines={white},
+row{1} = {bg=red4, fg=white, font=\bfseries\fontfamily{maksf}},rowhead = 1,
+hline{2} = {.7mm}, % midrule  
+}
+\newcounter{askhsh}
+\setcounter{askhsh}{1}
+\newcommand{\askhsh}{{\large\theaskhsh.}\ \addtocounter{askhsh}{1}}
+
+\titleformat{\section}{\Large}{\kerkissans{\thesection}}{10pt}{\Large\kerkissans{#1}}
+
+\setlength{\columnsep}{5mm}
+\titleformat{\paragraph}
+{\large}%
+{}{0em}%
+{\textcolor{xrwma}{\faSquare\ \ \kerkissans{\bmath{#1}}}}
+\setlength{\parindent}{0pt}
+\titlespacing{\paragraph}{0mm}{2mm}{2mm}
+
+\newcommand{\eng}[1]{\selectlanguage{english}#1\selectlanguage{greek}}
+\newcommand{\scfont}{\fontfamily{artemisia}\selectfont}
+\newcommand{\titlefont}{\fontfamily{txr}\selectfont}
+
+\begin{document}
+\twocolumn[{
+\centering
+{\scfont \textsc{\textcolor{xrwma}{Σπυρος Φρονιμος }- Μαθηματικος}}\\
+{\faEnvelope[regular] : \eng{spyrosfronimos@gmail.com\ \  \raisebox{-.4ex}{\rule{0.2mm}{5mm}} \ \faMobile*\ \faTelegramPlane\ \faViber\ : 693 232 7283}}\\
+\rule{12cm}{.2mm}\\\vspace{2mm}
+{ΑΣΚΗΣΕΙΣ - ΠΡΟΒΛΗΜΑΤΑ}\\
+\textbf{\today}\\\vspace{7mm}
+{\Large \textbf{\titlefont Μάθημα - Τάξη}}\\\vspace{2mm}
+{\huge \textcolor{xrwma}{\textbf{\titlefont Κεφάλαιο}}}\\\vspace{2mm}
+{\Large \textbf{\titlefont Ενότητα}}
+}]
+\paragraph{Παράγραφος}
+\askhsh 
+\end{document}
