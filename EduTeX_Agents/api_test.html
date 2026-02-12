@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Test</title>
+</head>
+<body>
+    <h1>API Test</h1>
+    <button onclick="testApi()">Ping Backend</button>
+    <div id="output"></div>
+    <script>
+        async function testApi() {
+            try {
+                const response = await fetch('http://localhost:8000/');
+                const data = await response.json();
+                document.getElementById('output').innerText = "Success: " + JSON.stringify(data);
+            } catch (error) {
+                document.getElementById('output').innerText = "Error: " + error;
+            }
+        }
+    </script>
+</body>
+</html>

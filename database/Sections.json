@@ -1,0 +1,632 @@
+[
+    {
+        "Chapter": "Akol",
+        "Id": "Akolouth",
+        "Name": "Ακολουθίες"
+    },
+    {
+        "Chapter": "Trigmt",
+        "Id": "Anag1oTet",
+        "Name": "Αναγωγή στο 1ο τεταρτημόριο"
+    },
+    {
+        "Chapter": "ExAn",
+        "Id": "Anis1ou",
+        "Name": "Ανισώσεις 1ου βαθμού"
+    },
+    {
+        "Chapter": "ExAn",
+        "Id": "Anis2ou",
+        "Name": "Ανισώσεις 2ου βαθμού"
+    },
+    {
+        "Chapter": "ExAn",
+        "Id": "Anis3ou+",
+        "Name": "Ανισώσεις 3ου+ βαθμού - Γινόμενο"
+    },
+    {
+        "Chapter": "Arith",
+        "Id": "ApolTimh",
+        "Name": "Απόλυτη τιμή"
+    },
+    {
+        "Chapter": "Akol",
+        "Id": "ArProodos",
+        "Name": "Αριθμητική πρόοδος"
+    },
+    {
+        "Chapter": "Arith",
+        "Id": "Arithmoi",
+        "Name": "Αριθμοί"
+    },
+    {
+        "Chapter": "ExAn",
+        "Id": "ArritesAnEx",
+        "Name": "Άρρητες εξισώσεις - ανισώσεις"
+    },
+    {
+        "Chapter": "Akol",
+        "Id": "GeomProodos",
+        "Name": "Γεωμετρική πρόοδος"
+    },
+    {
+        "Chapter": "Syst",
+        "Id": "GrammikaSys",
+        "Name": "Γραμμικά συστήματα"
+    },
+    {
+        "Chapter": "Arith",
+        "Id": "DiaireshKlasm",
+        "Name": "Διαίρεση κλασμάτων"
+    },
+    {
+        "Chapter": "AlgPar",
+        "Id": "DiaireshPolyon",
+        "Name": "Διαίρεση πολυωνύμων"
+    },
+    {
+        "Chapter": "Arith",
+        "Id": "Diataxh",
+        "Name": "Διάταξη αριθμών"
+    },
+    {
+        "Chapter": "ExAn",
+        "Id": "DionExiswseis",
+        "Name": "Διωνυμικές εξισώσεις ν- οστού βαθμού"
+    },
+    {
+        "Chapter": "Arith",
+        "Id": "Dynameis",
+        "Name": "Δυνάμεις πραγματικών αριθμών"
+    },
+    {
+        "Chapter": "AlgPar",
+        "Id": "EKPAlgPar",
+        "Name": "Ε.Κ.Π. - Μ.Κ.Δ. αλγεβρικών παραστάσεων"
+    },
+    {
+        "Chapter": "ExAn",
+        "Id": "Exis1ou",
+        "Name": "Εξισώσεις 1ου βαθμού"
+    },
+    {
+        "Chapter": "ExAn",
+        "Id": "Exis2ou",
+        "Name": "Εξισώσεις 2ου βαθμού"
+    },
+    {
+        "Chapter": "ExAn",
+        "Id": "Exis3ou+",
+        "Name": "Εξισώσεις 3ου+ βαθμού - Γινόμενο"
+    },
+    {
+        "Chapter": "Arith",
+        "Id": "IsothtaKlasm",
+        "Name": "Ισότητα κλασμάτων"
+    },
+    {
+        "Chapter": "Arith",
+        "Id": "Klasmata",
+        "Name": "Κλάσματα"
+    },
+    {
+        "Chapter": "ExAn",
+        "Id": "KlasmExAnis",
+        "Name": "Κλασματικές εξισώσεις - ανισώσεις"
+    },
+    {
+        "Chapter": "Logar",
+        "Id": "Logarithmos",
+        "Name": "Λογάριθμος"
+    },
+    {
+        "Chapter": "Logik",
+        "Id": "Logikh",
+        "Name": "Λογική"
+    },
+    {
+        "Chapter": "Syst",
+        "Id": "MhGramSys",
+        "Name": "Μη γραμμικά συστήματα"
+    },
+    {
+        "Chapter": "AlgPar",
+        "Id": "Mononyma",
+        "Name": "Μονώνυμα"
+    },
+    {
+        "Chapter": "Trigmt",
+        "Id": "NomosHmSyn",
+        "Name": "Νόμος ημιτόνων και συνημιτότων"
+    },
+    {
+        "Chapter": "AlgPar",
+        "Id": "Paragont",
+        "Name": "Παραγοντοποίηση"
+    },
+    {
+        "Chapter": "Arith",
+        "Id": "EKP-MKD",
+        "Name": "Πολλαπλάσια - Διαιρέτες - ΕΚΠ - ΜΚΔ - Πρώτοι αριθμοί"
+    },
+    {
+        "Chapter": "Arith",
+        "Id": "PollKlasm",
+        "Name": "Πολλαπλασιασμός κλασμάτων"
+    },
+    {
+        "Chapter": "AlgPar",
+        "Id": "Polyonyma",
+        "Name": "Πολυώνυμα"
+    },
+    {
+        "Chapter": "Arith",
+        "Id": "PrakseisAr",
+        "Name": "Πράξεις αριθμών και ιδιότητες"
+    },
+    {
+        "Chapter": "Arith",
+        "Id": "ProsthKlasm",
+        "Name": "Πρόσθεση και αφαίρεση κλασμάτων"
+    },
+    {
+        "Chapter": "AlgPar",
+        "Id": "RhtesParast",
+        "Name": "Ρητές παραστάσεις"
+    },
+    {
+        "Chapter": "Arith",
+        "Id": "Rizes",
+        "Name": "Ρίζες πραγματικών αριθμών"
+    },
+    {
+        "Chapter": "Arith",
+        "Id": "SygrKlasm",
+        "Name": "Σύκριση κλασμάτων"
+    },
+    {
+        "Chapter": "AlgPar",
+        "Id": "Tautothtes",
+        "Name": "Ταυτότητες"
+    },
+    {
+        "Chapter": "Trigmt",
+        "Id": "TrigExisoseis",
+        "Name": "Τριγωνομετρικές εξισώσεις"
+    },
+    {
+        "Chapter": "Trigmt",
+        "Id": "TrigSynart",
+        "Name": "Τριγωνομετρικές συναρτήσεις"
+    },
+    {
+        "Chapter": "Trigmt",
+        "Id": "TrigTaut",
+        "Name": "Τριγωνομετρικές ταυτότητες"
+    },
+    {
+        "Chapter": "Trigmt",
+        "Id": "TrigArithmoi",
+        "Name": "Τριγωνομετρικοί αριθμοί"
+    },
+    {
+        "Chapter": "Trigmt",
+        "Id": "TrigArAth",
+        "Name": "Τριγωνομετρικοί αριθμοί αθροίσματος"
+    },
+    {
+        "Chapter": "Trigmt",
+        "Id": "TrigDiplG",
+        "Name": "Τριγωνομετρικοί αριθμοί διπλάσιας γωνίας"
+    },
+    {
+        "Chapter": "Trig",
+        "Id": "AthrGwnTr",
+        "Name": "Άθροισμα γωνιών τριγώνου - πολυγώνου"
+    },
+    {
+        "Chapter": "Trig",
+        "Id": "AnisTrig",
+        "Name": "Ανισοτικές σχέσεις στα τρίγωνα"
+    },
+    {
+        "Chapter": "Kykl",
+        "Id": "AxKykloi",
+        "Name": "Αξιοσημείωτοι κύκλοι"
+    },
+    {
+        "Chapter": "Eutheia",
+        "Id": "ApShm-Emb",
+        "Name": "Απόσταση σημείου από ευθεία - Εμβαδόν τριγώνου"
+    },
+    {
+        "Chapter": "Trig",
+        "Id": "GPythTheor",
+        "Name": "Γενικευμένο Πυθαγόρειο θεώρημα"
+    },
+    {
+        "Chapter": "Eutheia",
+        "Id": "GenExisEutheias",
+        "Name": "Γενική μορφή εξίσωσης ευθείας"
+    },
+    {
+        "Chapter": "Dian",
+        "Id": "GinArithDian",
+        "Name": "Γινόμενο αριθμού με διάνυσμα"
+    },
+    {
+        "Chapter": "Eutheia",
+        "Id": "Gwnia",
+        "Name": "Γωνία - Είδη γωνιών"
+    },
+    {
+        "Chapter": "Dian",
+        "Id": "Dianysmata",
+        "Name": "Διανύσματα"
+    },
+    {
+        "Chapter": "KanP",
+        "Id": "EggKanPolyg",
+        "Name": "Εγγραφή κανονικών πολυγώνων"
+    },
+    {
+        "Chapter": "Parall",
+        "Id": "EidhParall",
+        "Name": "Είδη παραλληλογράμμων"
+    },
+    {
+        "Chapter": "KwnT",
+        "Id": "Elleipsi",
+        "Name": "Έλλειψη - Εξίσωση έλλειψης"
+    },
+    {
+        "Chapter": "KanP",
+        "Id": "EmbadaBasSx",
+        "Name": "Εμβαδά βασικών σχημάτων"
+    },
+    {
+        "Chapter": "Stereom",
+        "Id": "EmbadaOgkoi",
+        "Name": "Εμβαδά και όγκοι βασικών στερεών σχημάτων"
+    },
+    {
+        "Chapter": "Kykl",
+        "Id": "EmbKyklou",
+        "Name": "Εμβαδόν κύκλου και κυκλικού τομέα - τμήματος"
+    },
+    {
+        "Chapter": "Eutheia",
+        "Id": "ExisEutheias",
+        "Name": "Εξίσωση ευθείας"
+    },
+    {
+        "Chapter": "Dian",
+        "Id": "EswterikoGin",
+        "Name": "Εσωτερικό γινόμενο"
+    },
+    {
+        "Chapter": "Eutheia",
+        "Id": "Eutheia",
+        "Name": "Ευθεία - Ημιευθεία - Ευθύγραμμο τμήμα"
+    },
+    {
+        "Chapter": "Eutheia",
+        "Id": "EuthEpip3D",
+        "Name": "Ευθείες και επίπεδα στο χώρο"
+    },
+    {
+        "Chapter": "Eutheia",
+        "Id": "EfekseisDiadox",
+        "Name": "Εφεξής διαδοχικές γωνίες - Άθροισμα γωνιών"
+    },
+    {
+        "Chapter": "Trig",
+        "Id": "ThDiameswn",
+        "Name": "Θεώρημα διαμέσων"
+    },
+    {
+        "Chapter": "Trig",
+        "Id": "ThDixotomwn",
+        "Name": "Θεώρημα διχοτόμων"
+    },
+    {
+        "Chapter": "Parall",
+        "Id": "ThThalh",
+        "Name": "Θεώρημα Θαλή"
+    },
+    {
+        "Chapter": "Trig",
+        "Id": "IsOrthTrig",
+        "Name": "Ισότητα ορθογωνίων τριγώνων"
+    },
+    {
+        "Chapter": "Trig",
+        "Id": "IsotTrig",
+        "Name": "Ισότητα τριγώνων"
+    },
+    {
+        "Chapter": "KanP",
+        "Id": "KanPolyg",
+        "Name": "Κανονικα πολύγωνα"
+    },
+    {
+        "Chapter": "KwnT",
+        "Id": "ExisKyklou",
+        "Name": "Κύκλος - Εξίσωση κύκλου"
+    },
+    {
+        "Chapter": "Kykl",
+        "Id": "Kyklos",
+        "Name": "Κύκλος - Στοιχεία κύκλου"
+    },
+    {
+        "Chapter": "KanP",
+        "Id": "LogosEmb",
+        "Name": "Λόγος εμβαδών"
+    },
+    {
+        "Chapter": "Kykl",
+        "Id": "MhkosKyklou",
+        "Name": "Μήκος κύκλου και κυκλικού τόξου"
+    },
+    {
+        "Chapter": "Omoia",
+        "Id": "Omoiothta",
+        "Name": "Ομοιότητα"
+    },
+    {
+        "Chapter": "KwnT",
+        "Id": "Parabolh",
+        "Name": "Παραβολή - Εξίσωση παραβολής"
+    },
+    {
+        "Chapter": "Eutheia",
+        "Id": "ParallEuth",
+        "Name": "Παράλληλες ευθείες"
+    },
+    {
+        "Chapter": "Parall",
+        "Id": "Parallhlogr",
+        "Name": "Παραλληλόγραμμα"
+    },
+    {
+        "Chapter": "Eutheia",
+        "Id": "ParaplSymplG",
+        "Name": "Παραπληρωματικές - Συμπληρωματικές - Κατακορυφήν γωνίες"
+    },
+    {
+        "Chapter": "Dian",
+        "Id": "ProsthDian",
+        "Name": "Πρόσθεση και αφαίρεση διανυσματων"
+    },
+    {
+        "Chapter": "Trig",
+        "Id": "PythTheor",
+        "Name": "Πυθαγόρειο θεώρημα - Ορθές προβολές"
+    },
+    {
+        "Chapter": "Dian",
+        "Id": "SyntetDian",
+        "Name": "Συντεταγμένες διανύσματος"
+    },
+    {
+        "Chapter": "KwnT",
+        "Id": "Yperbolh",
+        "Name": "Υπερβολή"
+    },
+    {
+        "Chapter": "Synart",
+        "Id": "AntistrSyn",
+        "Name": "Αντίστροφη συνάρτηση"
+    },
+    {
+        "Chapter": "Olokl",
+        "Id": "ArxSAorOl",
+        "Name": "Αρχική συνάρτηση - Αόριστο ολοκλήρωμα"
+    },
+    {
+        "Chapter": "Oria",
+        "Id": "Asymptotes",
+        "Name": "Ασύμπτωτες"
+    },
+    {
+        "Chapter": "Synart",
+        "Id": "GrParastash",
+        "Name": "Γραφική παράσταση συνάρτησης"
+    },
+    {
+        "Chapter": "Logar",
+        "Id": "EkthetikhSyn",
+        "Name": "Εκθετική συνάρτηση"
+    },
+    {
+        "Chapter": "Olokl",
+        "Id": "EmbXwriou",
+        "Name": "Εμβαδόν χωρίου"
+    },
+    {
+        "Chapter": "Parag",
+        "Id": "ExisEfaptom",
+        "Name": "Εξίσωση εφαπτομένης γραφικής παράστασης"
+    },
+    {
+        "Chapter": "Synart",
+        "Id": "Synarthsh",
+        "Name": "Η έννοια της συνάρτησης"
+    },
+    {
+        "Chapter": "Synex",
+        "Id": "ThBolzano",
+        "Name": "Θεώρημα Bolzano"
+    },
+    {
+        "Chapter": "Parag",
+        "Id": "ThRolle",
+        "Name": "Θεώρημα Rolle"
+    },
+    {
+        "Chapter": "Parag",
+        "Id": "ThETΜΕΤ",
+        "Name": "Θεώρημα ενδιάμεσων τιμών - Θεώρημα μέγιστης και ελάχιστης τιμής"
+    },
+    {
+        "Chapter": "Parag",
+        "Id": "TheMTimhs",
+        "Name": "Θεώρημα μέσης τιμής"
+    },
+    {
+        "Chapter": "Parag",
+        "Id": "DelHospital",
+        "Name": "Κανόνας Del Hospital"
+    },
+    {
+        "Chapter": "Parag",
+        "Id": "Kyrtothta",
+        "Name": "Κυρτότητα - Σημεία καμπής"
+    },
+    {
+        "Chapter": "Logar",
+        "Id": "LogarSyn",
+        "Name": "Λογαριθμική συνάρτηση"
+    },
+    {
+        "Chapter": "Olokl",
+        "Id": "MethOlokl",
+        "Name": "Μέθοδοι ολοκλήρωσης"
+    },
+    {
+        "Chapter": "Synart",
+        "Id": "MetatGrPar",
+        "Name": "Μετατόπιση γραφικής παράστασης"
+    },
+    {
+        "Chapter": "Oria",
+        "Id": "MhPepOrio",
+        "Name": "Μη πεπερασμένο όριο"
+    },
+    {
+        "Chapter": "Parag",
+        "Id": "MonotAkrot",
+        "Name": "Μονοτονία ακρότατα συνάρτησης"
+    },
+    {
+        "Chapter": "Oria",
+        "Id": "OrioShmeio",
+        "Name": "Όριο σε σημείο"
+    },
+    {
+        "Chapter": "Oria",
+        "Id": "OrioApeiro",
+        "Name": "Όριο στο άπειρο"
+    },
+    {
+        "Chapter": "Olokl",
+        "Id": "OrismOlokl",
+        "Name": "Ορισμένο ολοκλήρωμα"
+    },
+    {
+        "Chapter": "Parag",
+        "Id": "ParagShmeio",
+        "Name": "Παράγωγος σε σημείο"
+    },
+    {
+        "Chapter": "Parag",
+        "Id": "Paragogos",
+        "Name": "Παράγωγος συνάρτηση"
+    },
+    {
+        "Chapter": "Parag",
+        "Id": "RythMetab",
+        "Name": "Ρυθμός μεταβολής"
+    },
+    {
+        "Chapter": "Synart",
+        "Id": "SymmGraf",
+        "Name": "Συμμετρίες γραφικής παράστασης"
+    },
+    {
+        "Chapter": "Synart",
+        "Id": "Synart1p1",
+        "Name": "Συνάρτηση 1-1"
+    },
+    {
+        "Chapter": "Synart",
+        "Id": "SynartYper",
+        "Name": "Συνάρτηση f(x)=a/x της υπερβολής"
+    },
+    {
+        "Chapter": "Synart",
+        "Id": "Synart2ou",
+        "Name": "Συνάρτηση f(x)=ax^2+bx+c της παραβολής"
+    },
+    {
+        "Chapter": "Synart",
+        "Id": "Synart1ou",
+        "Name": "Συνάρτηση f(x)=ax+b ευθεία"
+    },
+    {
+        "Chapter": "Olokl",
+        "Id": "SynartOlokl",
+        "Name": "Συνάρτηση ολοκλήρωμα"
+    },
+    {
+        "Chapter": "Parag",
+        "Id": "SynepThMT",
+        "Name": "Συνέπειες θεωρήματος μέσης τιμής"
+    },
+    {
+        "Chapter": "Synex",
+        "Id": "SynexeiaSyn",
+        "Name": "Συνέχεια συνάρτησης"
+    },
+    {
+        "Chapter": "Pithan",
+        "Id": "DeigmEnd",
+        "Name": "Δειγματικός χώρος - Ενδεχόμενα"
+    },
+    {
+        "Chapter": "Pithan",
+        "Id": "Pithanothta",
+        "Name": "Η έννοια της πιθανότητας"
+    },
+    {
+        "Chapter": "MetThDias",
+        "Id": "MetraDiasp",
+        "Name": "Μέτρα διασποράς"
+    },
+    {
+        "Chapter": "MetThDias",
+        "Id": "MetraThesis",
+        "Name": "Μέτρα θέσης"
+    },
+    {
+        "Chapter": "PaStD",
+        "Id": "OmadParat",
+        "Name": "Ομαδοποίηση παρατηρήσεων"
+    },
+    {
+        "Chapter": "Synola",
+        "Id": "Synola",
+        "Name": "Σύνολα"
+    },
+    {
+        "Chapter": "Synart",
+        "Id": "SynthSyn",
+        "Name": "Σύνθεση συναρτήσεων"
+    },
+    {
+        "Chapter": "Synart",
+        "Id": "IsesSyn",
+        "Name": "Ισότητα συναρτήσεων"
+    },
+    {
+        "Chapter": "PaStD",
+        "Id": "BasEnnStat",
+        "Name": "Βασικές έννοιες στατιστικής"
+    },
+    {
+        "Chapter": "PaStD",
+        "Id": "ParStD",
+        "Name": "Παρουσίαση στατιστικών δεδομένων"
+    }
+]

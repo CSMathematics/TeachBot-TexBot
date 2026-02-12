@@ -1,0 +1,11 @@
+{
+    "include": [
+        "EduTeX_Agents"
+    ],
+    "extraPaths": [
+        "EduTeX_Agents"
+    ],
+    "reportMissingImports": "warning",
+    "reportMissingModuleSource": "none",
+    "pythonVersion": "3.11"
+}

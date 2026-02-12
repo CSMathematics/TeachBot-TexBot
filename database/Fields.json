@@ -1,0 +1,27 @@
+[
+    {
+        "Description": null,
+        "Id": "Algebra",
+        "Name": "Άλγεβρα"
+    },
+    {
+        "Description": null,
+        "Id": "Geometria",
+        "Name": "Γεωμετρία"
+    },
+    {
+        "Description": null,
+        "Id": "Analysh",
+        "Name": "Ανάλυση"
+    },
+    {
+        "Description": null,
+        "Id": "Pithanothtes",
+        "Name": "Πιθανότητες"
+    },
+    {
+        "Description": null,
+        "Id": "Statistikh",
+        "Name": "Στατιστική"
+    }
+]

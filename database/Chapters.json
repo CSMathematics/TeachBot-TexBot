@@ -1,0 +1,177 @@
+[
+    {
+        "Field": "Algebra",
+        "Id": "Akol",
+        "Name": "Ακολουθίες"
+    },
+    {
+        "Field": "Algebra",
+        "Id": "AlgPar",
+        "Name": "Αλγεβρικές παραστάσεις"
+    },
+    {
+        "Field": "Algebra",
+        "Id": "Arith",
+        "Name": "Αριθμοί"
+    },
+    {
+        "Field": "Statistikh",
+        "Id": "PaStD",
+        "Name": "Βασικές έννοιες στατιστικής - Παρουσίαση στατιστικών δεδομένων"
+    },
+    {
+        "Field": "Geometria",
+        "Id": "Dian",
+        "Name": "Διανύσματα"
+    },
+    {
+        "Field": "Analysh",
+        "Id": "DEx1T",
+        "Name": "Διαφορικές εξισώσεις 1ης τάξης"
+    },
+    {
+        "Field": "Analysh",
+        "Id": "DEx2T",
+        "Name": "Διαφορικές εξισώσεις 2ης τάξης"
+    },
+    {
+        "Field": "Analysh",
+        "Id": "Logar",
+        "Name": "Εκθετική συνάρτηση - Λογάριθμός"
+    },
+    {
+        "Field": "Algebra",
+        "Id": "ExAn",
+        "Name": "Εξισώσεις - Ανισώσεις"
+    },
+    {
+        "Field": "Geometria",
+        "Id": "Eutheia",
+        "Name": "Ευθεία - Γωνίες"
+    },
+    {
+        "Field": "Analysh",
+        "Id": "Synart",
+        "Name": "Η έννοια της συνάρτησης - Βασικές συναρτήσεις"
+    },
+    {
+        "Field": "Geometria",
+        "Id": "Kykl",
+        "Name": "Κύκλος"
+    },
+    {
+        "Field": "Geometria",
+        "Id": "KwnT",
+        "Name": "Κωνικές τομές"
+    },
+    {
+        "Field": "Algebra",
+        "Id": "Logik",
+        "Name": "Λογική - Προτασιακός λογισμός"
+    },
+    {
+        "Field": "Analysh",
+        "Id": "MDE1T",
+        "Name": "Μερικές διαφορικές εξισώσεις 1ης τάξης"
+    },
+    {
+        "Field": "Analysh",
+        "Id": "MDE2T",
+        "Name": "Μερικές διαφορικές εξισώσεις 2ης τάξης"
+    },
+    {
+        "Field": "Analysh",
+        "Id": "Olokl",
+        "Name": "Ολοκληρώματα"
+    },
+    {
+        "Field": "Analysh",
+        "Id": "OlokEx",
+        "Name": "Ολοκληρωτικές εξισώσεις"
+    },
+    {
+        "Field": "Geometria",
+        "Id": "Omoia",
+        "Name": "Ομοιότητα - Αναλογίες"
+    },
+    {
+        "Field": "Analysh",
+        "Id": "Oria",
+        "Name": "Όρια"
+    },
+    {
+        "Field": "Analysh",
+        "Id": "Parag",
+        "Name": "Παράγωγοι"
+    },
+    {
+        "Field": "Geometria",
+        "Id": "Parall",
+        "Name": "Παραλληλόγραμμα"
+    },
+    {
+        "Field": "Pithanothtes",
+        "Id": "Pithan",
+        "Name": "Πιθανότητες"
+    },
+    {
+        "Field": "Algebra",
+        "Id": "Pinakes",
+        "Name": "Πίνακες"
+    },
+    {
+        "Field": "Geometria",
+        "Id": "KanP",
+        "Name": "Πολύγωνα - Κανονικά πολύγωνα"
+    },
+    {
+        "Field": "Geometria",
+        "Id": "PytTh",
+        "Name": "Πυθαγόρειο θεώρημα"
+    },
+    {
+        "Field": "Geometria",
+        "Id": "Stereom",
+        "Name": "Στερεομετρία"
+    },
+    {
+        "Field": "Analysh",
+        "Id": "Synex",
+        "Name": "Συνέχεια συνάρτησης"
+    },
+    {
+        "Field": "Pithanothtes",
+        "Id": "Synola",
+        "Name": "Σύνολα"
+    },
+    {
+        "Field": "Algebra",
+        "Id": "Syst",
+        "Name": "Συστήματα εξισώσεων και ανισώσεων"
+    },
+    {
+        "Field": "Geometria",
+        "Id": "SystSyn",
+        "Name": "Συστήματα συντεταγμένων"
+    },
+    {
+        "Field": "Geometria",
+        "Id": "Trig",
+        "Name": "Τρίγωνα"
+    },
+    {
+        "Field": "Algebra",
+        "Id": "Trigmt",
+        "Name": "Τριγωνομετρία"
+    },
+    {
+        "Field": "Geometria",
+        "Id": "BThTrig",
+        "Name": "Βασικά θεωρήματα στα τρίγωνα"
+    },
+    {
+        "Field": "Statistikh",
+        "Id": "MetThDias",
+        "Name": "Μέτρα θέσης και διασποράς"
+    }
+]

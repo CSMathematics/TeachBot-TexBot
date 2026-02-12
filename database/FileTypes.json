@@ -1,0 +1,170 @@
+[
+    {
+        "BelongsTo": null,
+        "FileType": "Ορισμός",
+        "FolderName": "Ορισμοί",
+        "Id": "Def",
+        "Solvable": 0
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Θεώρημα",
+        "FolderName": "Θεωρήματα",
+        "Id": "Theor",
+        "Solvable": 1
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Προταση",
+        "FolderName": "Προτάσεις",
+        "Id": "Prop",
+        "Solvable": 1
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Λήμμα",
+        "FolderName": "Λημματα",
+        "Id": "Lem",
+        "Solvable": 1
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Πορισμα",
+        "FolderName": "Πορίσματα",
+        "Id": "Cor",
+        "Solvable": 1
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Αξίωμα",
+        "FolderName": "Αξιώμματα",
+        "Id": "Ax",
+        "Solvable": 0
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Σχήμα",
+        "FolderName": "Σχήματα",
+        "Id": "Fig",
+        "Solvable": 0
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Πίνακας",
+        "FolderName": "Πίνακες",
+        "Id": "Tab",
+        "Solvable": 0
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Άσκηση ενότητας",
+        "FolderName": "Ασκήσεις",
+        "Id": "SectEx",
+        "Solvable": 1
+    },
+    {
+        "BelongsTo": "SectEx",
+        "FileType": "Λύση άσκησης ενότητας",
+        "FolderName": "Λύσεις ασκήσεων ενότητας",
+        "Id": "SolSE",
+        "Solvable": -1
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Θεμα ενότητας",
+        "FolderName": "Θεματα ενότητας",
+        "Id": "SectSub",
+        "Solvable": 1
+    },
+    {
+        "BelongsTo": "SectSub",
+        "FileType": "Λύση θέματος ενότητας",
+        "FolderName": "Λυσεις θεμάτων ενότητας",
+        "Id": "SolSS",
+        "Solvable": -1
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Μέθοδος",
+        "FolderName": "Μέθοδοι",
+        "Id": "Method",
+        "Solvable": 0
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Λυμένο παράδειγμα",
+        "FolderName": "Λυμένα παραδείγματα",
+        "Id": "Example",
+        "Solvable": 0
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Συνδυαστική άσκηση",
+        "FolderName": "Συνδυαστικές ασκήσεις",
+        "Id": "CombEx",
+        "Solvable": 1
+    },
+    {
+        "BelongsTo": "CombEx",
+        "FileType": "Λύση συνδυαστικής άσκησης",
+        "FolderName": "Λυσεις συνδυαστικών ασκήσεων",
+        "Id": "SolCE",
+        "Solvable": -1
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Συνδυαστικο θέμα",
+        "FolderName": "Συνδυαστικα θέματα",
+        "Id": "CombSub",
+        "Solvable": 1
+    },
+    {
+        "BelongsTo": "CombSub",
+        "FileType": "Λύση συνδυαστικού θέματος",
+        "FolderName": "Λυσεις συνδυαστικων θεμάτων",
+        "Id": "SolCS",
+        "Solvable": -1
+    },
+    {
+        "BelongsTo": null,
+        "FileType": "Πρόβλημα",
+        "FolderName": "Προβλήματα",
+        "Id": "Prob",
+        "Solvable": 1
+    },
+    {
+        "BelongsTo": "Prob",
+        "FileType": "Πρόβλημα - Solution",
+        "FolderName": "Προβλήματα - Solutions",
+        "Id": "Prob-Sol",
+        "Solvable": -1
+    },
+    {
+        "BelongsTo": "Theor",
+        "FileType": "Απόδειξη θεωρήματος",
+        "FolderName": "Αποδείξεις θεωρημάτων",
+        "Id": "ThPrf",
+        "Solvable": -1
+    },
+    {
+        "BelongsTo": "Prop",
+        "FileType": "Αποδειξη πρότασης",
+        "FolderName": "Αποδειξεις προτάσεων",
+        "Id": "PrPrf",
+        "Solvable": -1
+    },
+    {
+        "BelongsTo": "Lem",
+        "FileType": "Αποδειξη λήμματος",
+        "FolderName": "Αποδειξεις λημμάτων",
+        "Id": "LemPr",
+        "Solvable": -1
+    },
+    {
+        "BelongsTo": "Cor",
+        "FileType": "Αποδειξη πορίσματος",
+        "FolderName": "Αποδειξεις πορισμάτων",
+        "Id": "CorPr",
+        "Solvable": -1
+    }
+]
