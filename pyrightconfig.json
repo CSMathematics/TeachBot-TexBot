@@ -3,7 +3,11 @@
         "EduTeX_Agents"
     ],
     "extraPaths": [
-        "EduTeX_Agents"
+        "EduTeX_Agents",
+        "./EduTeX_Agents",
+        "EduTeX_Agents/core",
+        "EduTeX_Agents/skills",
+        "EduTeX_Agents/agents"
     ],
     "reportMissingImports": "warning",
     "reportMissingModuleSource": "none",

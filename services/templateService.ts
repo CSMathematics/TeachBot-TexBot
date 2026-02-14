@@ -14,6 +14,7 @@ export interface TemplateStyle {
 export interface TemplateConfig {
     style: string;
     mainColor: string;
+    solutionsMode?: 'none' | 'inline' | 'separate';
 }
 
 // ── Available Styles ─────────────────────────────────────────────────
@@ -47,19 +48,20 @@ export const TEMPLATE_STYLES: TemplateStyle[] = [
 export const DEFAULT_TEMPLATE_CONFIG: TemplateConfig = {
     style: 'scientific',
     mainColor: '#1285cc',
+    solutionsMode: 'none',
 };
 
 // ── Preset Colors ────────────────────────────────────────────────────
 
 export const PRESET_COLORS = [
-    { name: 'Blue',       hex: '#1285cc' },
-    { name: 'Red',        hex: '#aa1212' },
-    { name: 'Teal',       hex: '#0094a8' },
-    { name: 'Purple',     hex: '#6b21a8' },
-    { name: 'Green',      hex: '#15803d' },
-    { name: 'Orange',     hex: '#c2410c' },
-    { name: 'Dark Blue',  hex: '#1e3a5f' },
-    { name: 'Rose',       hex: '#be123c' },
+    { name: 'Blue', hex: '#1285cc' },
+    { name: 'Red', hex: '#aa1212' },
+    { name: 'Teal', hex: '#0094a8' },
+    { name: 'Purple', hex: '#6b21a8' },
+    { name: 'Green', hex: '#15803d' },
+    { name: 'Orange', hex: '#c2410c' },
+    { name: 'Dark Blue', hex: '#1e3a5f' },
+    { name: 'Rose', hex: '#be123c' },
 ];
 
 // ── Helper ───────────────────────────────────────────────────────────

@@ -15,26 +15,80 @@ class HintGenerator:
     def __init__(self):
         self.role = "Hint Designer"
 
+    def _load_agent_definition(self) -> str:
+        """
+        Loads the agent definition from hint-generator.md in the same directory.
+        """
+        try:
+            current_dir = os.path.dirname(__file__)
+            file_path = os.path.join(current_dir, "hint-generator.md")
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            else:
+                print(f"Warning: Agent definition not found at {file_path}")
+                return ""
+        except Exception as e:
+            print(f"Error loading agent definition: {e}")
+            return ""
+
     def generate_hints(self, exercise):
         """
         Generates 3-level hints (Idea -> Methodology -> Solution Step).
         """
-        topic = exercise.get("metadata", {}).get("topic", "").lower()
-        print(f"Agent {self.role}: generating hints for '{topic}'...")
+        
+        try:
+            from core.llm import LLMService
+            from core.workflow_loader import load_workflow
+            from core.skill_loader import load_skill
+            llm = LLMService()
+            workflow_spec = load_workflow("hints")
+            latex_skill = load_skill("latex_core")
+        except ImportError:
+            return self._fallback_hints(exercise)
 
-        hints = []
-        if "quadratic" in topic:
-            hints = [
-                "**Idea**: Use the quadratic formula or try to factorize.",
-                "**Method**: Calculate the discriminant $\\Delta = b^2 - 4ac$.",
-                "**Step**: If $\\Delta > 0$, the roots are $x_{1,2} = \\frac{-b \\pm \\sqrt{\\Delta}}{2a}$."
-            ]
-        else:
-            hints = ["Review the theory for this chapter."]
+        topic = exercise.get("metadata", {}).get("topic", "")
+        latex_content = exercise.get("latex", "")
+        agent_definition = self._load_agent_definition()
+        
+        system_prompt = f"""You are an expert mathematics tutor providing hints.
+        
+        === AGENT DEFINITION & RULES ===
+        {agent_definition}
+        === END AGENT DEFINITION ===
 
+        === LATEX SKILLS & CONVENTIONS ===
+        {latex_skill}
+        === END SKILLS ===
+
+        Use the following workflow specification:
+        
+        === WORKFLOW SPECIFICATION ===
+        {workflow_spec}
+        === END SPECIFICATION ===
+        
+        Topic: {topic}
+        Context: The user is stuck on this exercise.
+        
+        Output MUST be a JSON object with:
+        {{
+            "hints": ["Hint 1 (Idea)", "Hint 2 (Method)", "Hint 3 (Partial Step)"],
+            "count": 3
+        }}
+        """
+        
+        user_prompt = f"Generate hints for this exercise:\n{latex_content}"
+
+        try:
+            return llm.generate_json(user_prompt, system_instruction=system_prompt)
+        except Exception as e:
+            print(f"LLM Error in HintGenerator: {e}")
+            raise e
+
+    def _fallback_hints(self, exercise):
         return {
-            "hints": hints,
-            "count": len(hints)
+            "hints": ["Review the theory.", "Check similar examples."],
+            "count": 2
         }
 
 if __name__ == "__main__":

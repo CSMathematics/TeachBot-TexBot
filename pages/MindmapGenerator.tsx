@@ -13,7 +13,7 @@ const MindmapGenerator: React.FC = () => {
         if (!topic) return;
         setLoading(true);
         try {
-            const result = await apiGenerateMindmap({ topic });
+            const result = await apiGenerateMindmap({ topic, depth: 2 });
             setMindmapData(result);
         } catch (error) {
             console.error("Failed to generate mindmap:", error);

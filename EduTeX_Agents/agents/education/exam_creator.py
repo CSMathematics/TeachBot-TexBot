@@ -24,6 +24,8 @@ try:
     _HAS_TEMPLATES = True
 except ImportError:
     _HAS_TEMPLATES = False
+    TemplateRegistry = None
+    build_llm_context = None
 
 try:
     from agents.education.exercise_generator import ExerciseGenerator  # type: ignore[no-redef]
@@ -43,6 +45,23 @@ class ExamCreator:
         self.calibrator: 'DifficultyCalibrator' = DifficultyCalibrator()
         self.template_registry = TemplateRegistry() if TemplateRegistry else None
 
+    def _load_agent_definition(self) -> str:
+        """
+        Loads the agent definition from exam-creator.md in the same directory.
+        """
+        try:
+            current_dir = os.path.dirname(__file__)
+            file_path = os.path.join(current_dir, "exam-creator.md")
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            else:
+                print(f"Warning: Agent definition not found at {file_path}")
+                return ""
+        except Exception as e:
+            print(f"Error loading agent definition: {e}")
+            return ""
+
     def create_exam(
         self,
         topic: str,
@@ -50,6 +69,7 @@ class ExamCreator:
         difficulty: str = "medium",
         template_style: str = "scientific",
         maincolor: str = "#1285cc",
+        api_key: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Creates a full exam with 'num_questions' on 'topic' using LLM.
@@ -63,14 +83,41 @@ class ExamCreator:
 
         # Available class commands for LLM
         cls_commands = ''
-        if self.template_registry:
-            cmds = self.template_registry.get_available_commands()
+        registry = self.template_registry
+        if registry:
+            cmds = registry.get_available_commands()
             cls_commands = '\n'.join(
                 f'  - {info["description"]}' for info in cmds.values()
             )
 
+        # Use LLM Service
+        from core.llm import LLMService
+        from core.workflow_loader import load_workflow
+        from core.skill_loader import load_skill
+        llm = LLMService(api_key=api_key)
+
+        # Load Workflow Specification
+        workflow_spec = load_workflow("exam")
+        latex_skill = load_skill("latex_core")
+        agent_definition = self._load_agent_definition()
+        
         # 1. Generate Questions via LLM
         system_prompt = f"""You are an expert mathematics educator creating a test.
+        
+        === AGENT DEFINITION & RULES ===
+        {agent_definition}
+        === END AGENT DEFINITION ===
+
+        === LATEX SKILLS & CONVENTIONS ===
+        {latex_skill}
+        === END SKILLS ===
+
+        Use the following workflow specification as your primary guide:
+        
+        === WORKFLOW SPECIFICATION ===
+        {workflow_spec}
+        === END SPECIFICATION ===
+
         Topic: {topic}
         Difficulty: {difficulty}
         Count: {num_questions}
@@ -89,18 +136,18 @@ class ExamCreator:
 
         user_prompt = f"Generate {num_questions} {difficulty} exercises for {topic}."
 
-        # Use LLM Service
-        from core.llm import LLMService
-        llm = LLMService()
-
         try:
             result = llm.generate_json(user_prompt, system_instruction=system_prompt)
             exercises = result.get("exercises", [])
+            
+            # Additional check: If LLM returns empty list (e.g. safety filter or error)
+            if not exercises:
+                raise ValueError("LLM returned empty exercise list")
+                
         except Exception as e:
             print(f"LLM Error in ExamCreator: {e}")
-            exercises = []
-            for i in range(num_questions):
-                exercises.append(self.generator.generate(topic, difficulty))
+            # User requested NO MOCK FALLBACK. Re-raising exception to notify frontend.
+            raise RuntimeError(f"Failed to generate exam via AI: {e}")
 
         # 2. Calibrate
         calibration = self.calibrator.calibrate_exam(exercises)
@@ -127,18 +174,23 @@ class ExamCreator:
         """
         Stitches exercises into a single LaTeX document using exam.cls template.
         """
-        content = "\\askhseis\n\n"
-        for idx, ex in enumerate(exercises):
-            content += f"\\paragraph{{Θέμα {idx+1}}}\n"
-            content += ex["latex"] + "\n\n"
-
         # Use TemplateRegistry if available
-        if self.template_registry:
-            return self.template_registry.get_document_wrapper(
-                style=style,
-                title=f'Διαγώνισμα: {topic}',
-                chapter=f'Δυσκολία: {difficulty}',
+        # Use TemplateRegistry if available
+        registry = self.template_registry
+        if registry:
+            # Prepare content
+            content = "\\askhseis\n\n"
+            for idx, ex in enumerate(exercises):
+                # Handle both dictionary (from LLM) and string (fallback) formats
+                q_text = ex.get("latex", "") if isinstance(ex, dict) else str(ex)
+                content += f"\\paragraph{{Θέμα {idx+1}}}\n{q_text}\n\n"
+
+            return registry.get_document_custom(
                 content=content,
+                style=style,
+                title=topic,
+                subtitle=f'Difficulty: {difficulty}',
+                chapter=difficulty.capitalize(),
                 maincolor=maincolor,
             )
 

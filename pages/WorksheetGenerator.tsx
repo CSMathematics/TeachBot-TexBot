@@ -12,6 +12,10 @@ import { apiGenerateExercises } from '../services/agentApiService';
 import { useSettings } from '../contexts/SettingsContext';
 import { cn } from '../lib/utils';
 import { generateLatexFromExam } from '../lib/latexGenerator';
+import TemplateConfigurator from '../components/TemplateConfigurator';
+import { DEFAULT_TEMPLATE_CONFIG, TemplateConfig } from '../services/templateService';
+import LatexFixer from '../components/LatexFixer';
+import { Dialog, DialogContent } from '../components/ui';
 
 const WorksheetGenerator: React.FC = () => {
     const { settings } = useSettings();
@@ -23,6 +27,8 @@ const WorksheetGenerator: React.FC = () => {
     // Params - read defaults from settings
     const [mode, setMode] = useState<'practice' | 'remedial'>('practice');
     const [mistakes, setMistakes] = useState('');
+    const [templateConfig, setTemplateConfig] = useState<TemplateConfig>(DEFAULT_TEMPLATE_CONFIG);
+    const [fixerOpen, setFixerOpen] = useState(false);
 
     const [topic, setTopic] = useState('Άλγεβρα: Εξισώσεις & Ανισώσεις - Εξισώσεις 2ου βαθμού');
     const [manualTopic, setManualTopic] = useState('');
@@ -88,21 +94,9 @@ const WorksheetGenerator: React.FC = () => {
                             mistakes: mode === 'remedial' ? mistakes.split('\n').filter(Boolean) : undefined
                         });
                         exercises = apiResult.exercises;
-                    } catch {
-                        // Fallback Logic
-                        exercises = Array.from({ length: exerciseCount }, (_, i) => {
-                            const diff = difficulty < 25 ? 'easy' : difficulty < 50 ? 'medium' : difficulty < 75 ? 'hard' : 'advanced';
-                            if (mode === 'remedial') {
-                                return {
-                                    latex: `\\begin{exercise}\n    \\textbf{Remedial Exercise ${i + 1}}\n    Based on your error in "${mistakes.split('\n')[0] || 'Algebra'}", solve:\n    \\[ x^2 - 5x + 6 = 0 \\]\n    \\textit{Tip: Watch out for sign errors!}\n\\end{exercise}`,
-                                    metadata: { topic: currentTopic, difficulty: diff, tags: ['remedial', 'algebra'] },
-                                };
-                            }
-                            return {
-                                latex: `\\begin{exercise}\n    Άσκηση ${i + 1}: Να λύσετε την εξίσωση\n    \\[ x^2 + ${i + 2}x + ${i + 1} = 0 \\]\n\\end{exercise}`,
-                                metadata: { topic: currentTopic, difficulty: diff, tags: ['algebra', 'equations'] },
-                            };
-                        });
+                    } catch (error) {
+                        console.error("API Error in WorksheetGenerator:", error);
+                        throw error;
                     }
                     setResult({ exercises, count: exercises.length });
                 } else {
@@ -139,6 +133,28 @@ const WorksheetGenerator: React.FC = () => {
     } : null;
 
 
+
+    // Update result when mockExam changes (e.g. edited in preview)
+    const handleExamChange = (newExam: Exam) => {
+        // Reconstruct result from newExam if needed, or just update local state if we had one
+        // Since result and mockExam are derived, this is tricky. 
+        // Better to store 'exercises' in state and derive mockExam, or store 'exam' in state.
+        // For now, let's try to update 'result' exercises from the edited exam questions
+        if (!result) return;
+
+        const updatedExercises = newExam.questions.map(q => ({
+            latex: q.content,
+            metadata: { difficulty: q.difficulty, tags: q.tags },
+            solution: q.solution
+        }));
+
+        setResult({ ...result, exercises: updatedExercises });
+    };
+
+    const getLatexSource = () => {
+        if (!mockExam) return '';
+        return generateLatexFromExam(mockExam, templateConfig);
+    };
 
     return (
         <div className="flex h-screen overflow-hidden bg-background text-foreground">
@@ -279,6 +295,11 @@ const WorksheetGenerator: React.FC = () => {
                         </div>
                     </div>
 
+                    {/* Template Configurator */}
+                    <div className="pt-3 border-t border-border">
+                        <TemplateConfigurator config={templateConfig} onChange={setTemplateConfig} />
+                    </div>
+
                     <div className="space-y-2">
                         <Label className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">AI Pipeline</Label>
                         <div className="grid gap-2">
@@ -366,7 +387,12 @@ const WorksheetGenerator: React.FC = () => {
                     )}
 
                     {mockExam && activeTab === 'preview' && (
-                        <PdfPreview exam={mockExam} />
+                        <PdfPreview
+                            exam={mockExam}
+                            onExamChange={handleExamChange}
+                            templateConfig={templateConfig}
+                            onConfigChange={setTemplateConfig}
+                        />
                     )}
 
                     {result && activeTab === 'code' && (
@@ -391,7 +417,7 @@ const WorksheetGenerator: React.FC = () => {
                                 </Button></CardHeader>
                             <CardContent className="p-0 bg-[#282c34]">
                                 <pre className="p-6 overflow-x-auto text-[#abb2bf] leading-relaxed">
-                                    {mockExam ? generateLatexFromExam(mockExam) : ''}
+                                    {getLatexSource()}
                                 </pre>
                             </CardContent>
                         </Card>

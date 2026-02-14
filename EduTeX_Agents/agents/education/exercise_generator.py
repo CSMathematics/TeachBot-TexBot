@@ -12,7 +12,7 @@ if PROJECT_ROOT not in sys.path:
 
 # Attempt to import skills
 try:
-    from skills.clean_numbers.scripts.verify import is_clean_number, verify_expression
+    from skills.clean_numbers.scripts.verify import is_clean_number, verify_expression  # type: ignore
 except ImportError:
     # Fallback or mock if running in isolation
     pass
@@ -25,81 +25,94 @@ class ExerciseGenerator:
     def __init__(self):
         self.role = "Math Generator"
         
-    def generate(self, topic: str, difficulty: str = "medium") -> Dict[str, Any]:
+    def _load_agent_definition(self) -> str:
+        """
+        Loads the agent definition from exercise-generator.md in the same directory.
+        """
+        try:
+            current_dir = os.path.dirname(__file__)
+            file_path = os.path.join(current_dir, "exercise-generator.md")
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            else:
+                print(f"Warning: Agent definition not found at {file_path}")
+                return ""
+        except Exception as e:
+            print(f"Error loading agent definition: {e}")
+            return ""
+
+    def generate(self, topic: str, difficulty: str = "medium", **kwargs) -> Dict[str, Any]:
         """
         Generates a math exercise based on the topic.
-        In a real SaaS, this would call an LLM. Here we mock/template it for the MVP.
         """
         print(f"Agent {self.role}: Generating {difficulty} exercise for '{topic}'...")
         
-        # Mock Logic for MVP - Templates
-        if "quadratic" in topic.lower():
-            return self._generate_quadratic(difficulty)
-        elif "integral" in topic.lower():
-            return self._generate_integral(difficulty)
-        else:
-            return {
-                "type": "unknown",
-                "latex": f"% Exercise for {topic} (Not implemented in MVP)",
-                "solution": "N/A"
-            }
-
-    def _generate_quadratic(self, difficulty):
-        """
-        Generates a quadratic equation with integer roots (Clean Numbers).
-        """
-        # We want roots r1, r2 to be integers.
-        # Equation: (x - r1)(x - r2) = x^2 - (r1+r2)x + r1*r2 = 0
-        from random import randint
+        mistakes = kwargs.get("mistakes")
+        agent_definition = self._load_agent_definition()
         
-        r1 = randint(-5, 5)
-        r2 = randint(-5, 5)
-        
-        # Ensure distinct roots for "hard"
-        if difficulty == "hard" and r1 == r2:
-            r2 += 1
+        # Load LLM, Workflow, and Skills
+        try:
+            from core.llm import LLMService  # type: ignore
+            from core.workflow_loader import load_workflow  # type: ignore
+            from core.skill_loader import load_skill # type: ignore
             
-        b = -(r1 + r2)
-        c = r1 * r2
-        
-        # Formatting coeffs
-        sign_b = "+" if b >= 0 else "-"
-        abs_b = abs(b)
-        str_b = f" {sign_b} {abs_b}x" if abs_b != 1 else f" {sign_b} x"
-        if b == 0: str_b = ""
-        
-        sign_c = "+" if c >= 0 else "-"
-        abs_c = abs(c)
-        str_c = f" {sign_c} {abs_c}"
-        if c == 0: str_c = ""
+            api_key = kwargs.get("api_key")
+            llm = LLMService(api_key=api_key)
+            workflow_spec = load_workflow("worksheet")
+            latex_skill = load_skill("latex_core")
+        except ImportError:
+            print("Warning: Core modules not found. Using fallback.")
+            return self._fallback_response(topic, difficulty)
 
-        equation = f"x^2{str_b}{str_c} = 0"
+        # Build Prompts
+        system_prompt = f"""You are an expert mathematics educator creating exercises.
         
-        latex = f"""
-\\begin{{exercise}}
-    Nα λύσετε την εξίσωση:
-    \\[ {equation} \\]
-\\end{{exercise}}
-"""
-        metadata = {
-            "topic": "Quadratic Equations",
-            "tags": ["algebra", "polynomials"],
-            "difficulty": difficulty,
-            "roots": [r1, r2],
-            "clean_numbers": True
-        }
-        
-        return {
-            "latex": latex.strip(),
-            "metadata": metadata,
-            "raw_equation": equation
-        }
+        === AGENT DEFINITION & RULES ===
+        {agent_definition}
+        === END AGENT DEFINITION ===
 
-    def _generate_integral(self, difficulty):
-        # Placeholder for integrals
+        === LATEX SKILLS & CONVENTIONS ===
+        {latex_skill}
+        === END SKILLS ===
+
+        Use the following workflow specification as your primary guide:
+        
+        === WORKFLOW SPECIFICATION ===
+        {workflow_spec}
+        === END SPECIFICATION ===
+
+        Topic: {topic}
+        Difficulty: {difficulty}
+        """
+        
+        if mistakes:
+            system_prompt += f"\nFocus on addressing these student mistakes: {', '.join(mistakes)}"
+        
+        system_prompt += """
+        Output MUST be a single JSON object representing ONE exercise.
+        Schema:
+        {
+            "latex": "The LaTeX code for the exercise body (no preamble).",
+            "solution": "The LaTeX code for the solution.",
+            "metadata": { "points": 10, "difficulty": "difficulty", "tags": ["topic"] }
+        }
+        """
+        
+        user_prompt = f"Generate a unique {difficulty} exercise for {topic}."
+
+        try:
+            return llm.generate_json(user_prompt, system_instruction=system_prompt)
+        except Exception as e:
+            print(f"LLM Error in ExerciseGenerator: {e}")
+            raise e # User requested no mock fallback
+
+    def _fallback_response(self, topic, difficulty):
         return {
-            "latex": "\\[ \\int x^2 \\,dx \\]",
-            "metadata": {"topic": "Integrals", "difficulty": difficulty}
+            "type": "Algebra",
+            "latex": f"\\begin{{exercise}}\\n    FALLBACK: {topic}\\n\\end{{exercise}}",
+            "solution": "Fallback solution.",
+            "metadata": {"topic": topic, "difficulty": difficulty, "tags": ["fallback"]}
         }
 
 if __name__ == "__main__":

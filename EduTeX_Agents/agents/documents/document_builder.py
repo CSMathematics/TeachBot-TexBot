@@ -37,6 +37,23 @@ class DocumentBuilder:
         # Legacy method (kept for potential script usage)
         return self.build("article", title, content)
 
+    def _load_agent_definition(self) -> str:
+        """
+        Loads the agent definition from document-builder.md in the same directory.
+        """
+        try:
+            current_dir = os.path.dirname(__file__)
+            file_path = os.path.join(current_dir, "document-builder.md")
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            else:
+                print(f"Warning: Agent definition not found at {file_path}")
+                return ""
+        except Exception as e:
+            print(f"Error loading agent definition: {e}")
+            return ""
+
     def build(self, doc_type: str, title: str, content: str) -> dict:
         """
         API Wrapper: Builds a document and returns the LaTeX code using LLM.
@@ -44,7 +61,33 @@ class DocumentBuilder:
         print(f"Agent {self.role}: Building {doc_type} '{title}'...")
         
         if self.llm:
+            try:
+                from core.workflow_loader import load_workflow
+                from core.skill_loader import load_skill
+                workflow_spec = load_workflow("document", domain="documents")
+                latex_skill = load_skill("latex_core")
+            except ImportError:
+                 workflow_spec = "Create a standard LaTeX document."
+                 latex_skill = "Use standard LaTeX."
+
+            agent_definition = self._load_agent_definition()
+
             system_prompt = f"""You are a LaTeX expert.
+            
+            === AGENT DEFINITION & RULES ===
+            {agent_definition}
+            === END AGENT DEFINITION ===
+
+            === LATEX SKILLS & CONVENTIONS ===
+            {latex_skill}
+            === END SKILLS ===
+
+            Use the following workflow specification:
+            
+            === WORKFLOW SPECIFICATION ===
+            {workflow_spec}
+            === END SPECIFICATION ===
+
             Task: Create a valid {doc_type} document.
             Title: {title}
             Language: Greek (use babel).

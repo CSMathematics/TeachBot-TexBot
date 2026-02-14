@@ -23,6 +23,23 @@ class IsomorphicGenerator:
     def __init__(self):
         self.generator = ExerciseGenerator()
 
+    def _load_agent_definition(self) -> str:
+        """
+        Loads the agent definition from isomorphic-generator.md in the same directory.
+        """
+        try:
+            current_dir = os.path.dirname(__file__)
+            file_path = os.path.join(current_dir, "isomorphic-generator.md")
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            else:
+                print(f"Warning: Agent definition not found at {file_path}")
+                return ""
+        except Exception as e:
+            print(f"Error loading agent definition: {e}")
+            return ""
+
     def generate_variations(self, input_exercise, count=1):
         """
         Generates 'count' variations based on the input exercise's metadata.
@@ -34,14 +51,71 @@ class IsomorphicGenerator:
         topic = metadata.get("topic", "")
         difficulty = metadata.get("difficulty", "medium")
         
-        variations = []
         
-        # Simple implementation: Re-run generator N times.
-        # Future improvement: Ensure unique roots from original.
+        try:
+            from core.llm import LLMService
+            from core.workflow_loader import load_workflow
+            from core.skill_loader import load_skill
+            llm = LLMService()
+            workflow_spec = load_workflow("variant")
+            latex_skill = load_skill("latex_core")
+        except ImportError:
+            return self._fallback_variations(input_exercise, count)
+
+        # Extract context
+        latex_content = input_exercise.get("latex", "")
+        agent_definition = self._load_agent_definition()
+        
+        system_prompt = f"""You are an expert mathematics educator creating isomorphic variations of exercises.
+        
+        === AGENT DEFINITION & RULES ===
+        {agent_definition}
+        === END AGENT DEFINITION ===
+
+        === LATEX SKILLS & CONVENTIONS ===
+        {latex_skill}
+        === END SKILLS ===
+
+        Use the following workflow specification:
+        
+        === WORKFLOW SPECIFICATION ===
+        {workflow_spec}
+        === END SPECIFICATION ===
+        
+        Original Exercise:
+        {latex_content}
+        
+        Target Count: {count}
+        
+        Output MUST be a JSON object with:
+        {{
+            "variations": [
+                {{ "latex": "Variation 1 body", "metadata": {{...}} }},
+                {{ "latex": "Variation 2 body", "metadata": {{...}} }}
+            ]
+        }}
+        """
+        
+        user_prompt = f"Create {count} isomorphic variations."
+        
+        try:
+            result = llm.generate_json(user_prompt, system_instruction=system_prompt)
+            return result.get("variations", [])
+        except Exception as e:
+            print(f"LLM Error in IsomorphicGenerator: {e}")
+            return self._fallback_variations(input_exercise, count)
+
+    def _fallback_variations(self, input_exercise, count):
+        variations = []
         for i in range(count):
-            new_exercise = self.generator.generate(topic, difficulty)
-            variations.append(new_exercise)
-            
+            try:
+                new_exercise = self.generator.generate(
+                    input_exercise.get("metadata", {}).get("topic", ""),
+                    input_exercise.get("metadata", {}).get("difficulty", "medium")
+                )
+                variations.append(new_exercise)
+            except:
+                variations.append(input_exercise) # Last resort copy
         return variations
 
 if __name__ == "__main__":

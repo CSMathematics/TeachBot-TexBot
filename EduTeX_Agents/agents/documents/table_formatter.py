@@ -8,13 +8,95 @@ class TableFormatter:
     """
     def __init__(self):
         self.role = "Table Wizard"
+        try:
+             from core.llm import LLMService
+             self.llm = LLMService()
+        except ImportError:
+             self.llm = None
 
-    def generate_table(self, data, caption="My Table"):
+    def _load_agent_definition(self) -> str:
         """
-        Generates a LaTeX table from a list of lists.
+        Loads the agent definition from table-formatter.md in the same directory.
         """
-        print(f"Agent {self.role}: generating table '{caption}'...")
+        try:
+            agent_file = os.path.join(os.path.dirname(__file__), "table-formatter.md")
+            if os.path.exists(agent_file):
+                with open(agent_file, "r", encoding="utf-8") as f:
+                    return f.read()
+        except Exception:
+            pass
+        return "Role: Table Wizard\nResponsibility: Format LaTeX tables."
+
+    def format_table(self, data: list, headers: list, style: str = "booktabs") -> dict:
+        """
+        API Wrapper: Formats a table.
+        """
+        print(f"Agent {self.role}: formatting table with style '{style}'...")
         
+        if self.llm:
+            try:
+                from core.workflow_loader import load_workflow
+                from core.skill_loader import load_skill
+                workflow_spec = load_workflow("table", domain="documents")
+                latex_skill = load_skill("latex_core")
+            except ImportError:
+                 workflow_spec = "Create a LaTeX table."
+                 latex_skill = "Use standard LaTeX."
+
+            agent_definition = self._load_agent_definition()
+
+            system_prompt = f"""You are a LaTeX Table Expert.
+            
+            === AGENT DEFINITION & RULES ===
+            {agent_definition}
+
+            === LATEX SKILLS & CONVENTIONS ===
+            {latex_skill}
+            === END SKILLS ===
+
+            === WORKFLOW SPECIFICATION ===
+            {workflow_spec}
+            === END WORKFLOW ===
+            """
+            
+            user_prompt = f"Format the following data as a LaTeX table using '{style}' style.\nHeaders: {headers}\nData: {data}"
+            
+            try:
+                response = self.llm.generate(user_prompt, system_instruction=system_prompt)
+                # Naive extraction if LLM returns text
+                latex_code = response
+                if "```latex" in response:
+                    latex_code = response.split("```latex")[1].split("```")[0].strip()
+                elif "```" in response:
+                    latex_code = response.split("```")[1].split("```")[0].strip()
+                    
+                return {
+                    "latex": latex_code,
+                    "type": "table",
+                    "metadata": {"style": style, "rows": len(data)}
+                }
+            except Exception as e:
+                print(f"LLM generation failed: {e}")
+                # Fallback to manual generation logic
+        
+        # Combine headers and data for the internal generator (Fallback)
+        combined_data = []
+        if headers:
+            combined_data.append(headers)
+        combined_data.extend(data)
+        
+        latex_code = self._generate_manual(combined_data, caption="Generated Table")
+        
+        return {
+            "latex": latex_code,
+            "type": "table",
+            "metadata": {"style": style, "rows": len(data)}
+        }
+
+    def _generate_manual(self, data, caption="My Table"):
+        """
+        Generates a LaTeX table from a list of lists (Legacy/Fallback).
+        """
         if not data: return "% No data for table"
         
         num_cols = len(data[0])
@@ -30,25 +112,8 @@ class TableFormatter:
         
         return latex
 
-    def format_table(self, data: list, headers: list, style: str = "booktabs") -> dict:
-        """
-        API Wrapper: Formats a table.
-        """
-        # Combine headers and data for the internal generator
-        combined_data = []
-        if headers:
-            combined_data.append(headers)
-        combined_data.extend(data)
-        
-        latex_code = self.generate_table(combined_data, caption="Generated Table")
-        
-        return {
-            "latex": latex_code,
-            "type": "table",
-            "metadata": {"style": style, "rows": len(data)}
-        }
-
 if __name__ == "__main__":
     formatter = TableFormatter()
-    data = [["Header 1", "Header 2"], ["Row 1", "Val 1"], ["Row 2", "Val 2"]]
-    print(formatter.generate_table(data))
+    data = [["Row 1", "Val 1"], ["Row 2", "Val 2"]]
+    headers = ["Header 1", "Header 2"]
+    print(formatter.format_table(data, headers))

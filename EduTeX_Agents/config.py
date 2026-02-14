@@ -6,12 +6,12 @@ load_dotenv()
 
 class Config:
     # API Keys
-    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "").strip() or None
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip() or None
 
     # Model Preferences (User requested high-end)
     # Fallback to standard robust models if specific versions aren't valid API slugs yet
-    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-pro-latest") 
+    GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.0-flash") 
     OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
 
     # Global Settings

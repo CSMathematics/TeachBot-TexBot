@@ -14,6 +14,23 @@ class TikZExpert:
         except ImportError:
              self.llm = None
 
+    def _load_agent_definition(self) -> str:
+        """
+        Loads the agent definition from tikz-expert.md in the same directory.
+        """
+        try:
+            current_dir = os.path.dirname(__file__)
+            file_path = os.path.join(current_dir, "tikz-expert.md")
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            else:
+                print(f"Warning: Agent definition not found at {file_path}")
+                return ""
+        except Exception as e:
+            print(f"Error loading agent definition: {e}")
+            return ""
+
     def generate_figure(self, description):
         """
         Generates TikZ code based on a description using LLM.
@@ -21,8 +38,34 @@ class TikZExpert:
         print(f"Agent {self.role}: generating figure for '{description}'...")
         
         if self.llm:
-            system_prompt = """You are a TikZ expert.
-            Output MUST be valid LaTeX code starting with \\begin{tikzpicture} and ending with \\end{tikzpicture}.
+            try:
+                from core.workflow_loader import load_workflow
+                from core.skill_loader import load_skill
+                workflow_spec = load_workflow("figure", domain="documents")
+                latex_skill = load_skill("latex_core")
+            except ImportError:
+                 workflow_spec = "Create a TikZ figure."
+                 latex_skill = "Use standard TikZ."
+
+            agent_definition = self._load_agent_definition()
+            
+            system_prompt = f"""You are a TikZ expert.
+            
+            === AGENT DEFINITION & RULES ===
+            {agent_definition}
+            === END AGENT DEFINITION ===
+
+            === LATEX SKILLS & CONVENTIONS ===
+            {latex_skill}
+            === END SKILLS ===
+
+            Use the following workflow specification:
+            
+            === WORKFLOW SPECIFICATION ===
+            {workflow_spec}
+            === END SPECIFICATION ===
+
+            Output MUST be valid LaTeX code starting with \\begin{{tikzpicture}} and ending with \\end{{tikzpicture}}.
             Do NOT include \\documentclass or preamble.
             Use pgfplots if plotting functions.
             """

@@ -20,6 +20,23 @@ class MindmapGenerator:
         except ImportError:
              self.llm = None
 
+    def _load_agent_definition(self) -> str:
+        """
+        Loads the agent definition from mindmap-generator.md in the same directory.
+        """
+        try:
+            current_dir = os.path.dirname(__file__)
+            file_path = os.path.join(current_dir, "mindmap-generator.md")
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            else:
+                print(f"Warning: Agent definition not found at {file_path}")
+                return ""
+        except Exception as e:
+            print(f"Error loading agent definition: {e}")
+            return ""
+
     def generate_mindmap_data(self, topic):
         """
         Returns structure for a TikZ mindmap using LLM.
@@ -27,18 +44,43 @@ class MindmapGenerator:
         print(f"Agent {self.role}: mapping concepts for '{topic}'...")
 
         if self.llm:
-            system_prompt = """You are an expert educator creating a concept map.
+            try:
+                from core.workflow_loader import load_workflow
+                from core.skill_loader import load_skill
+                workflow_spec = load_workflow("mindmap")
+                latex_skill = load_skill("latex_core")
+            except ImportError:
+                workflow_spec = "Generate a JSON concept map."
+                latex_skill = "Use standard LaTeX constraints."
+            
+            agent_definition = self._load_agent_definition()
+            
+            system_prompt = f"""You are an expert educator creating a concept map.
+            
+            === AGENT DEFINITION & RULES ===
+            {agent_definition}
+            === END AGENT DEFINITION ===
+
+            === LATEX SKILLS & CONVENTIONS ===
+            {latex_skill}
+            === END SKILLS ===
+
+            Use the following workflow specification:
+            
+            === WORKFLOW SPECIFICATION ===
+            {workflow_spec}
+            === END SPECIFICATION ===
+
             Output MUST be a JSON object with the following structure:
-            {
+            {{
                 "root": "Main Topic",
                 "branches": [
-                    {
+                    {{
                         "name": "Subtopic 1",
                         "nodes": ["Detail 1", "Detail 2"]
-                    },
-                    ...
+                    }}
                 ]
-            }
+            }}
             Keep it concise and hierarchical. Use LaTeX math mode ($...$) for formulas.
             """
             
