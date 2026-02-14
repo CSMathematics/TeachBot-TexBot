@@ -18,6 +18,23 @@ class BeamerCreator:
         # Legacy
         return ""
 
+    def _load_agent_definition(self) -> str:
+        """
+        Loads the agent definition from beamer-creator.md in the same directory.
+        """
+        try:
+            current_dir = os.path.dirname(__file__)
+            file_path = os.path.join(current_dir, "beamer-creator.md")
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            else:
+                print(f"Warning: Agent definition not found at {file_path}")
+                return ""
+        except Exception as e:
+            print(f"Error loading agent definition: {e}")
+            return ""
+
     def create(self, title: str, topic: str, slide_count: int) -> dict:
         """
         API Wrapper: Creates a detailed Beamer presentation using LLM.
@@ -25,7 +42,33 @@ class BeamerCreator:
         print(f"Agent {self.role}: Creating presentation on '{topic}'...")
         
         if self.llm:
+            try:
+                from core.workflow_loader import load_workflow
+                from core.skill_loader import load_skill
+                workflow_spec = load_workflow("presentation", domain="documents")
+                latex_skill = load_skill("latex_core")
+            except ImportError:
+                 workflow_spec = "Create standard Beamer slides."
+                 latex_skill = "Use standard LaTeX."
+
+            agent_definition = self._load_agent_definition()
+
             system_prompt = f"""You are an academic presentation expert.
+            
+            === AGENT DEFINITION & RULES ===
+            {agent_definition}
+            === END AGENT DEFINITION ===
+
+            === LATEX SKILLS & CONVENTIONS ===
+            {latex_skill}
+            === END SKILLS ===
+
+            Use the following workflow specification:
+            
+            === WORKFLOW SPECIFICATION ===
+            {workflow_spec}
+            === END SPECIFICATION ===
+
             Task: Create a Beamer presentation in LaTeX.
             Topic: {topic}
             Title: {title}

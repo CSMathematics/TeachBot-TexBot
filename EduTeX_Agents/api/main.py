@@ -4,7 +4,7 @@ import uuid
 import json
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from fastapi import FastAPI, HTTPException  # type: ignore
+from fastapi import FastAPI, HTTPException, Header  # type: ignore
 from pydantic import BaseModel  # type: ignore
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
 
@@ -15,10 +15,11 @@ if PROJECT_ROOT not in sys.path:
 
 # ─── Import All Agents ───────────────────────────────────────────────
 
-def safe_import(module_path, class_name):
+def safe_import(module_path, class_name) -> Any:
     """Import with fallback for missing modules."""
     try:
-        module = __import__(module_path, fromlist=[class_name])
+        import importlib
+        module = importlib.import_module(module_path)
         return getattr(module, class_name)
     except (ImportError, AttributeError) as e:
         print(f"Warning: Could not import {class_name} from {module_path}: {e}")
@@ -222,7 +223,7 @@ class LaTeXResponse(BaseModel):
 
 # ─── Helper ──────────────────────────────────────────────────────────
 
-def require_agent(agent_class, name: str):
+def require_agent(agent_class: Optional[Any], name: str):
     """Raises 503 if agent is not available."""
     if agent_class is None:
         raise HTTPException(status_code=503, detail=f"{name} agent not available (Import Error)")
@@ -241,26 +242,26 @@ def list_agents():
     """Returns catalog of all available agents with status."""
     agents = [
         # Education
-        AgentInfo(id="exercise-generator", name="Exercise Generator", nameEl="Γεννήτρια Ασκήσεων", domain="EDUCATION", description="Creates math exercises", endpoint="/api/generate-exercises", status="online" if ExerciseGenerator else "offline"),
-        AgentInfo(id="exam-creator", name="Exam Creator", nameEl="Δημιουργός Διαγωνισμάτων", domain="EDUCATION", description="Assembles full exams", endpoint="/api/generate-exam", status="online" if ExamCreator else "offline"),
-        AgentInfo(id="solution-writer", name="Solution Writer", nameEl="Συγγραφέας Λύσεων", domain="EDUCATION", description="Step-by-step solutions", endpoint="/api/generate-solutions", status="online" if SolutionWriter else "offline"),
-        AgentInfo(id="isomorphic-generator", name="Variant Generator", nameEl="Γεννήτρια Παραλλαγών", domain="EDUCATION", description="Exercise variations", endpoint="/api/generate-variants", status="online" if IsomorphicGenerator else "offline"),
-        AgentInfo(id="difficulty-calibrator", name="Difficulty Calibrator", nameEl="Βαθμονομητής Δυσκολίας", domain="EDUCATION", description="Calibrates difficulty", endpoint="/api/calibrate-difficulty", status="online" if DifficultyCalibrator else "offline"),
-        AgentInfo(id="hint-generator", name="Hint Designer", nameEl="Σχεδιαστής Υποδείξεων", domain="EDUCATION", description="Progressive hints", endpoint="/api/generate-hints", status="online" if HintGenerator else "offline"),
-        AgentInfo(id="pitfall-detector", name="Pitfall Detector", nameEl="Ανιχνευτής Παγίδων", domain="EDUCATION", description="Common student errors", endpoint="/api/detect-pitfalls", status="online" if PitfallDetector else "offline"),
-        AgentInfo(id="rubric-designer", name="Rubric Designer", nameEl="Σχεδιαστής Κριτηρίων", domain="EDUCATION", description="Grading rubrics", endpoint="/api/generate-rubric", status="online" if RubricDesigner else "offline"),
-        AgentInfo(id="mindmap-generator", name="Mindmap Generator", nameEl="Γεννήτρια Εννοιολογικών Χαρτών", domain="EDUCATION", description="Concept maps", endpoint="/api/generate-mindmap", status="online" if MindmapGenerator else "offline"),
-        AgentInfo(id="prerequisite-checker", name="Prerequisite Checker", nameEl="Ελεγκτής Προαπαιτουμένων", domain="EDUCATION", description="Prerequisite validation", endpoint="/api/check-prerequisites", status="online" if PrerequisiteChecker else "offline"),
-        AgentInfo(id="multi-method-solver", name="Multi-Method Solver", nameEl="Πολυμεθοδικός Λύτης", domain="EDUCATION", description="Multiple solving methods", endpoint="/api/multi-method-solve", status="online" if MultiMethodSolver else "offline"),
-        AgentInfo(id="panhellenic-formatter", name="Panhellenic Formatter", nameEl="Μορφοποιητής Πανελληνίων", domain="EDUCATION", description="Panhellenic exam style", endpoint="/api/format-panhellenic", status="online" if PanhellenicFormatter else "offline"),
+        AgentInfo(id="exercise-generator", name="Exercise Generator", nameEl="Γεννήτρια Ασκήσεων", domain="EDUCATION", description="Creates math exercises", endpoint="/api/generate-exercises", status="online" if ExerciseGenerator else "offline"),  # type: ignore
+        AgentInfo(id="exam-creator", name="Exam Creator", nameEl="Δημιουργός Διαγωνισμάτων", domain="EDUCATION", description="Assembles full exams", endpoint="/api/generate-exam", status="online" if ExamCreator else "offline"),  # type: ignore
+        AgentInfo(id="solution-writer", name="Solution Writer", nameEl="Συγγραφέας Λύσεων", domain="EDUCATION", description="Step-by-step solutions", endpoint="/api/generate-solutions", status="online" if SolutionWriter else "offline"),  # type: ignore
+        AgentInfo(id="isomorphic-generator", name="Variant Generator", nameEl="Γεννήτρια Παραλλαγών", domain="EDUCATION", description="Exercise variations", endpoint="/api/generate-variants", status="online" if IsomorphicGenerator else "offline"),  # type: ignore
+        AgentInfo(id="difficulty-calibrator", name="Difficulty Calibrator", nameEl="Βαθμονομητής Δυσκολίας", domain="EDUCATION", description="Calibrates difficulty", endpoint="/api/calibrate-difficulty", status="online" if DifficultyCalibrator else "offline"),  # type: ignore
+        AgentInfo(id="hint-generator", name="Hint Designer", nameEl="Σχεδιαστής Υποδείξεων", domain="EDUCATION", description="Progressive hints", endpoint="/api/generate-hints", status="online" if HintGenerator else "offline"),  # type: ignore
+        AgentInfo(id="pitfall-detector", name="Pitfall Detector", nameEl="Ανιχνευτής Παγίδων", domain="EDUCATION", description="Common student errors", endpoint="/api/detect-pitfalls", status="online" if PitfallDetector else "offline"),  # type: ignore
+        AgentInfo(id="rubric-designer", name="Rubric Designer", nameEl="Σχεδιαστής Κριτηρίων", domain="EDUCATION", description="Grading rubrics", endpoint="/api/generate-rubric", status="online" if RubricDesigner else "offline"),  # type: ignore
+        AgentInfo(id="mindmap-generator", name="Mindmap Generator", nameEl="Γεννήτρια Εννοιολογικών Χαρτών", domain="EDUCATION", description="Concept maps", endpoint="/api/generate-mindmap", status="online" if MindmapGenerator else "offline"),  # type: ignore
+        AgentInfo(id="prerequisite-checker", name="Prerequisite Checker", nameEl="Ελεγκτής Προαπαιτουμένων", domain="EDUCATION", description="Prerequisite validation", endpoint="/api/check-prerequisites", status="online" if PrerequisiteChecker else "offline"),  # type: ignore
+        AgentInfo(id="multi-method-solver", name="Multi-Method Solver", nameEl="Πολυμεθοδικός Λύτης", domain="EDUCATION", description="Multiple solving methods", endpoint="/api/multi-method-solve", status="online" if MultiMethodSolver else "offline"),  # type: ignore
+        AgentInfo(id="panhellenic-formatter", name="Panhellenic Formatter", nameEl="Μορφοποιητής Πανελληνίων", domain="EDUCATION", description="Panhellenic exam style", endpoint="/api/format-panhellenic", status="online" if PanhellenicFormatter else "offline"),  # type: ignore
         # Documents
-        AgentInfo(id="document-builder", name="Document Builder", nameEl="Δημιουργός Εγγράφων", domain="DOCUMENTS", description="Articles, reports, CVs", endpoint="/api/build-document", status="online" if DocumentBuilder else "offline"),
-        AgentInfo(id="tikz-expert", name="TikZ Expert", nameEl="Ειδικός TikZ", domain="DOCUMENTS", description="TikZ/PGFPlots figures", endpoint="/api/generate-figure", status="online" if TikZExpert else "offline"),
-        AgentInfo(id="table-formatter", name="Table Formatter", nameEl="Μορφοποιητής Πινάκων", domain="DOCUMENTS", description="LaTeX tables", endpoint="/api/format-table", status="online" if TableFormatter else "offline"),
-        AgentInfo(id="beamer-creator", name="Beamer Creator", nameEl="Δημιουργός Παρουσιάσεων", domain="DOCUMENTS", description="Beamer slides", endpoint="/api/create-presentation", status="online" if BeamerCreator else "offline"),
-        AgentInfo(id="bibliography-manager", name="Bibliography Manager", nameEl="Διαχειριστής Βιβλιογραφίας", domain="DOCUMENTS", description="BibTeX management", endpoint="/api/manage-bibliography", status="online" if BibliographyManager else "offline"),
-        AgentInfo(id="template-curator", name="Template Curator", nameEl="Επιμελητής Προτύπων", domain="DOCUMENTS", description="LaTeX templates", endpoint="/api/manage-templates", status="online" if TemplateCurator else "offline"),
-        AgentInfo(id="fix-agent", name="LaTeX Fix Agent", nameEl="Διορθωτής LaTeX", domain="DOCUMENTS", description="Fix LaTeX errors", endpoint="/api/fix-latex", status="online" if FixAgent else "offline"),
+        AgentInfo(id="document-builder", name="Document Builder", nameEl="Δημιουργός Εγγράφων", domain="DOCUMENTS", description="Articles, reports, CVs", endpoint="/api/build-document", status="online" if DocumentBuilder else "offline"),  # type: ignore
+        AgentInfo(id="tikz-expert", name="TikZ Expert", nameEl="Ειδικός TikZ", domain="DOCUMENTS", description="TikZ/PGFPlots figures", endpoint="/api/generate-figure", status="online" if TikZExpert else "offline"),  # type: ignore
+        AgentInfo(id="table-formatter", name="Table Formatter", nameEl="Μορφοποιητής Πινάκων", domain="DOCUMENTS", description="LaTeX tables", endpoint="/api/format-table", status="online" if TableFormatter else "offline"),  # type: ignore
+        AgentInfo(id="beamer-creator", name="Beamer Creator", nameEl="Δημιουργός Παρουσιάσεων", domain="DOCUMENTS", description="Beamer slides", endpoint="/api/create-presentation", status="online" if BeamerCreator else "offline"),  # type: ignore
+        AgentInfo(id="bibliography-manager", name="Bibliography Manager", nameEl="Διαχειριστής Βιβλιογραφίας", domain="DOCUMENTS", description="BibTeX management", endpoint="/api/manage-bibliography", status="online" if BibliographyManager else "offline"),  # type: ignore
+        AgentInfo(id="template-curator", name="Template Curator", nameEl="Επιμελητής Προτύπων", domain="DOCUMENTS", description="LaTeX templates", endpoint="/api/manage-templates", status="online" if TemplateCurator else "offline"),  # type: ignore
+        AgentInfo(id="fix-agent", name="LaTeX Fix Agent", nameEl="Διορθωτής LaTeX", domain="DOCUMENTS", description="Fix LaTeX errors", endpoint="/api/fix-latex", status="online" if FixAgent else "offline"),  # type: ignore
     ] # type: ignore
     return agents
 
@@ -268,9 +269,9 @@ def list_agents():
 # ── Education Endpoints ──────────────────────────────────────────────
 
 @app.post("/api/generate-exam", response_model=ExamResponse)
-async def generate_exam(request: GenerationRequest):
+async def generate_exam(request: GenerationRequest, x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-API-Key")):
     """Multi-agent exam generation pipeline."""
-    require_agent(ExamCreator, "ExamCreator")
+    require_agent(ExamCreator, "ExamCreator")  # type: ignore
     print(f"API: Exam request for '{request.topic}' ({request.questionCount} Qs)")
 
     creator = ExamCreator()
@@ -283,7 +284,8 @@ async def generate_exam(request: GenerationRequest):
             num_questions=request.questionCount,
             difficulty=agent_difficulty,
             template_style=request.templateStyle,
-            maincolor=request.mainColor
+            maincolor=request.mainColor,
+            api_key=x_gemini_api_key
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Agent error: {str(e)}")
@@ -292,15 +294,16 @@ async def generate_exam(request: GenerationRequest):
     questions_out = []
     for ex in result.get("exercises", []):
         meta = ex.get("metadata", {})
-        questions_out.append(QuestionResponse(
-            id=str(uuid.uuid4()),
-            content=ex.get("latex", ""),
-            solution=ex.get("solution", ""),
-            difficulty=meta.get("difficulty", "Medium").title(),
-            points=meta.get("points", 10),
-            type=meta.get("type", "Algebra").title(),
-            tags=meta.get("tags", [request.topic])
-        ))  # type: ignore
+        q_data = {
+            "id": str(uuid.uuid4()),
+            "content": ex.get("latex", ""),
+            "solution": ex.get("solution", ""),
+            "difficulty": meta.get("difficulty", "Medium").title(),
+            "points": meta.get("points", 10),
+            "type": meta.get("type", "Algebra").title(),
+            "tags": meta.get("tags", [request.topic]),
+        }
+        questions_out.append(QuestionResponse(**q_data))  # type: ignore
 
     # Optional: add rubric
     rubric_data = None
@@ -310,30 +313,48 @@ async def generate_exam(request: GenerationRequest):
             r = designer.create_rubric(ex)
             rubric_data = r.get("rubric", [])
 
-    return ExamResponse(
-        id=str(uuid.uuid4()),
-        title=f"Exam: {request.topic}",
-        subject="Mathematics",
-        gradeLevel=request.gradeLevel,
-        durationMinutes=request.questionCount * 15,
-        difficulty=request.difficulty * 20,
-        questions=questions_out,
-        createdAt=datetime.now().isoformat(),
-        calibration=result.get("calibration"),
-        rubric=rubric_data,
-    )  # type: ignore
+    exam_data = {
+        "id": str(uuid.uuid4()),
+        "title": f"Exam: {request.topic}",
+        "subject": "Mathematics",
+        "gradeLevel": request.gradeLevel,
+        "durationMinutes": request.questionCount * 15,
+        "difficulty": request.difficulty * 20,
+        "questions": questions_out,
+        "createdAt": datetime.now().isoformat(),
+        "calibration": result.get("calibration"),
+        "rubric": rubric_data,
+    }
+    return ExamResponse(**exam_data)  # type: ignore
+
+
+# Exercise
+class ExerciseRequest(BaseModel):
+    topic: str
+    difficulty: str = "medium"
+    count: int = 3
+    mistakes: Optional[List[str]] = None
+
+class ExerciseResponse(BaseModel):
+    exercises: List[Dict[str, Any]]
+    count: int
+
+
 
 
 @app.post("/api/generate-exercises", response_model=ExerciseResponse)
-async def generate_exercises(request: ExerciseRequest):
+async def generate_exercises(request: ExerciseRequest, x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-API-Key")):
     """Generate standalone exercises."""
-    require_agent(ExerciseGenerator, "ExerciseGenerator")
+    require_agent(ExerciseGenerator, "ExerciseGenerator")  # type: ignore
     generator = ExerciseGenerator()
 
     exercises = []
-    for _ in range(request.count):
-        ex = generator.generate(request.topic, request.difficulty)
-        exercises.append(ex)
+    try:
+        for _ in range(request.count):
+            ex = generator.generate(request.topic, request.difficulty, mistakes=request.mistakes, api_key=x_gemini_api_key)
+            exercises.append(ex)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"Exercise generation failed: {str(e)}")
 
     return ExerciseResponse(exercises=exercises, count=len(exercises))  # type: ignore
 
@@ -341,7 +362,7 @@ async def generate_exercises(request: ExerciseRequest):
 @app.post("/api/generate-solutions", response_model=SolutionResponse)
 async def generate_solutions(request: SolutionRequest):
     """Generate step-by-step solution."""
-    require_agent(SolutionWriter, "SolutionWriter")
+    require_agent(SolutionWriter, "SolutionWriter")  # type: ignore
     writer = SolutionWriter()
     result = writer.solve(request.exercise)
     return SolutionResponse(solution_latex=result.get("solution_latex", ""))  # type: ignore
@@ -350,7 +371,7 @@ async def generate_solutions(request: SolutionRequest):
 @app.post("/api/generate-variants", response_model=VariantResponse)
 async def generate_variants(request: VariantRequest):
     """Generate isomorphic variations of an exercise."""
-    require_agent(IsomorphicGenerator, "IsomorphicGenerator")
+    require_agent(IsomorphicGenerator, "IsomorphicGenerator")  # type: ignore
     iso = IsomorphicGenerator()
     variations = iso.generate_variations(request.exercise, request.count)
     return VariantResponse(variations=variations, count=len(variations))  # type: ignore
@@ -359,7 +380,7 @@ async def generate_variants(request: VariantRequest):
 @app.post("/api/calibrate-difficulty", response_model=CalibrationResponse)
 async def calibrate_difficulty(request: CalibrationRequest):
     """Calibrate exam difficulty distribution."""
-    require_agent(DifficultyCalibrator, "DifficultyCalibrator")
+    require_agent(DifficultyCalibrator, "DifficultyCalibrator")  # type: ignore
     calibrator = DifficultyCalibrator()
     report = calibrator.calibrate_exam(request.exercises, request.target_difficulty)
     return CalibrationResponse(**report)  # type: ignore
@@ -368,7 +389,7 @@ async def calibrate_difficulty(request: CalibrationRequest):
 @app.post("/api/generate-hints", response_model=HintResponse)
 async def generate_hints(request: HintRequest):
     """Generate progressive hints."""
-    require_agent(HintGenerator, "HintGenerator")
+    require_agent(HintGenerator, "HintGenerator")  # type: ignore
     gen = HintGenerator()
     result = gen.generate_hints(request.exercise)
     return HintResponse(**result)  # type: ignore
@@ -377,7 +398,7 @@ async def generate_hints(request: HintRequest):
 @app.post("/api/detect-pitfalls", response_model=PitfallResponse)
 async def detect_pitfalls(request: PitfallRequest):
     """Detect common student mistakes."""
-    require_agent(PitfallDetector, "PitfallDetector")
+    require_agent(PitfallDetector, "PitfallDetector")  # type: ignore
     detector = PitfallDetector()
     result = detector.detect_pitfalls(request.exercise)
     return PitfallResponse(**result)  # type: ignore
@@ -386,7 +407,7 @@ async def detect_pitfalls(request: PitfallRequest):
 @app.post("/api/generate-rubric", response_model=RubricResponse)
 async def generate_rubric(request: RubricRequest):
     """Generate grading rubric."""
-    require_agent(RubricDesigner, "RubricDesigner")
+    require_agent(RubricDesigner, "RubricDesigner")  # type: ignore
     designer = RubricDesigner()
     result = designer.create_rubric(request.exercise)
     return RubricResponse(**result)  # type: ignore
@@ -395,7 +416,7 @@ async def generate_rubric(request: RubricRequest):
 @app.post("/api/generate-mindmap")
 async def generate_mindmap(request: MindmapRequest):
     """Generate concept mindmap structure."""
-    require_agent(MindmapGenerator, "MindmapGenerator")
+    require_agent(MindmapGenerator, "MindmapGenerator")  # type: ignore
     gen = MindmapGenerator()
     return gen.generate_mindmap_data(request.topic)
 
@@ -403,7 +424,7 @@ async def generate_mindmap(request: MindmapRequest):
 @app.post("/api/check-prerequisites")
 async def check_prerequisites(request: PrerequisiteRequest):
     """Check topic prerequisites."""
-    require_agent(PrerequisiteChecker, "PrerequisiteChecker")
+    require_agent(PrerequisiteChecker, "PrerequisiteChecker")  # type: ignore
     checker = PrerequisiteChecker()
     return checker.check(request.topic)
 
@@ -411,7 +432,7 @@ async def check_prerequisites(request: PrerequisiteRequest):
 @app.post("/api/multi-method-solve")
 async def multi_method_solve(request: MultiMethodRequest):
     """Solve exercise using multiple methods."""
-    require_agent(MultiMethodSolver, "MultiMethodSolver")
+    require_agent(MultiMethodSolver, "MultiMethodSolver")  # type: ignore
     solver = MultiMethodSolver()
     return solver.solve(request.exercise)
 
@@ -419,7 +440,7 @@ async def multi_method_solve(request: MultiMethodRequest):
 @app.post("/api/format-panhellenic")
 async def format_panhellenic(request: PanhellenicRequest):
     """Format in Panhellenic exam style."""
-    require_agent(PanhellenicFormatter, "PanhellenicFormatter")
+    require_agent(PanhellenicFormatter, "PanhellenicFormatter")  # type: ignore
     formatter = PanhellenicFormatter()
     return formatter.format(request.topic)
 
@@ -429,7 +450,7 @@ async def format_panhellenic(request: PanhellenicRequest):
 @app.post("/api/build-document", response_model=LaTeXResponse)
 async def build_document(request: DocumentRequest):
     """Build a LaTeX document."""
-    require_agent(DocumentBuilder, "DocumentBuilder")
+    require_agent(DocumentBuilder, "DocumentBuilder")  # type: ignore
     builder = DocumentBuilder()
     result = builder.build(request.type, request.title, request.content or "")
     return LaTeXResponse(**result)  # type: ignore
@@ -438,7 +459,7 @@ async def build_document(request: DocumentRequest):
 @app.post("/api/generate-figure", response_model=LaTeXResponse)
 async def generate_figure(request: FigureRequest):
     """Generate TikZ figure."""
-    require_agent(TikZExpert, "TikZExpert")
+    require_agent(TikZExpert, "TikZExpert")  # type: ignore
     expert = TikZExpert()
     result = expert.generate_figure(request.description)
     return LaTeXResponse(**result)  # type: ignore
@@ -447,7 +468,7 @@ async def generate_figure(request: FigureRequest):
 @app.post("/api/format-table", response_model=LaTeXResponse)
 async def format_table(request: TableRequest):
     """Format a LaTeX table."""
-    require_agent(TableFormatter, "TableFormatter")
+    require_agent(TableFormatter, "TableFormatter")  # type: ignore
     formatter = TableFormatter()
     result = formatter.format_table(request.data, request.headers, request.style or "booktabs")
     return LaTeXResponse(latex=result.get("latex", ""), metadata=result.get("metadata"))  # type: ignore
@@ -456,7 +477,7 @@ async def format_table(request: TableRequest):
 @app.post("/api/create-presentation", response_model=LaTeXResponse)
 async def create_presentation(request: PresentationRequest):
     """Create Beamer presentation."""
-    require_agent(BeamerCreator, "BeamerCreator")
+    require_agent(BeamerCreator, "BeamerCreator")  # type: ignore
     creator = BeamerCreator()
     result = creator.create(request.title, request.topic, request.slideCount)
     return LaTeXResponse(**result)  # type: ignore
@@ -465,7 +486,7 @@ async def create_presentation(request: PresentationRequest):
 @app.post("/api/fix-latex", response_model=LaTeXResponse)
 async def fix_latex(request: FixRequest):
     """Fix LaTeX compilation errors."""
-    require_agent(FixAgent, "FixAgent")
+    require_agent(FixAgent, "FixAgent")  # type: ignore
     fixer = FixAgent()
     result = fixer.fix(request.latexCode, request.errorMessage or "")
     return LaTeXResponse(**result)  # type: ignore

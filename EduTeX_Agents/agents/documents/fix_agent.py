@@ -35,6 +35,23 @@ class FixAgent:
         # ... existing logic ...
         return {"status": "skipped", "file": file_path}
 
+    def _load_agent_definition(self) -> str:
+        """
+        Loads the agent definition from fix-agent.md in the same directory.
+        """
+        try:
+            current_dir = os.path.dirname(__file__)
+            file_path = os.path.join(current_dir, "fix-agent.md")
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            else:
+                print(f"Warning: Agent definition not found at {file_path}")
+                return ""
+        except Exception as e:
+            print(f"Error loading agent definition: {e}")
+            return ""
+
     def fix(self, latex_code: str, error_message: str = "") -> dict:
         """
         API Wrapper: Fixes LaTeX code string using LLM.
@@ -42,7 +59,33 @@ class FixAgent:
         print(f"Agent {self.role}: Fixing LaTeX code based on error: {error_message[:50]}...")
         
         if self.llm:
+            try:
+                from core.workflow_loader import load_workflow
+                from core.skill_loader import load_skill
+                workflow_spec = load_workflow("fix", domain="documents")
+                latex_skill = load_skill("latex_core")
+            except ImportError:
+                 workflow_spec = "Fix the LaTeX errors."
+                 latex_skill = "Use standard LaTeX."
+
+            agent_definition = self._load_agent_definition()
+
             system_prompt = f"""You are an Expert LaTeX Debugger.
+            
+            === AGENT DEFINITION & RULES ===
+            {agent_definition}
+            === END AGENT DEFINITION ===
+
+            === LATEX SKILLS & CONVENTIONS ===
+            {latex_skill}
+            === END SKILLS ===
+
+            Use the following workflow specification:
+            
+            === WORKFLOW SPECIFICATION ===
+            {workflow_spec}
+            === END SPECIFICATION ===
+
             Task: Fix the LaTeX code based on the compiler error.
             Error Message: {error_message}
             

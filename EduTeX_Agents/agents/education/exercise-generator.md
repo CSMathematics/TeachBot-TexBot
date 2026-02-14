@@ -77,8 +77,8 @@ syllabus/[Τάξη].md
 \end{alist}
 ```
 
-- Template: `templates/FFExercises.tex` (Default)
-- Template: `templates/PersonalExercises.tex` (για personal duties)
+- Template: `templates/emax.tex` (Default)
+- Template: `templates/worksheet.tex` (για personal duties)
 - Χωρίς νέα πακέτα
 - Χωρίς λύσεις
 

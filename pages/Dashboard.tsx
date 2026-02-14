@@ -21,7 +21,7 @@ const calculateActivity = (items: Exam[]) => {
   });
 
   return last7Days.map(date => {
-    const dayStr = date.toLocaleDateString('en-US', { weekday: 'short' }); // Mon, Tue...
+    const dayStr = date.toLocaleDateString('el-GR', { weekday: 'short' }); // Greek days
     const dateStr = date.toISOString().split('T')[0];
 
     const dayItems = items.filter(i => i.createdAt.startsWith(dateStr));
@@ -33,22 +33,64 @@ const calculateActivity = (items: Exam[]) => {
   });
 };
 
-// Heatmap: topics × months (Simplified logic: count items per topic)
-// This is hard to map perfectly without topic standardization, so we'll keep a static structure populated with real counts if possible, 
-// or just keep it as a "Demo" for now since topics are free text.
-// Let's rely on basic topic matching if possible, otherwise use mock for heatmap to preserve UI layout.
-const mockHeatmapData = [
-  { topic: 'Εξισώσεις 2ου βαθμού', months: [3, 5, 4, 2, 0, 1] },
-  { topic: 'Παράγωγοι', months: [0, 2, 6, 5, 3, 4] },
-  { topic: 'Ολοκληρώματα', months: [0, 0, 1, 3, 7, 5] },
-  { topic: 'Τριγωνομετρία', months: [2, 4, 3, 1, 0, 0] },
-  { topic: 'Στατιστική', months: [1, 0, 2, 4, 3, 6] },
-  { topic: 'Γεωμετρία', months: [4, 3, 2, 0, 1, 0] },
-  { topic: 'Πίθανότητες', months: [0, 1, 0, 2, 5, 3] },
-  { topic: 'Ακολουθίες', months: [5, 3, 1, 0, 0, 0] },
-];
+// Heatmap: topics × last 6 months
+const calculateHeatmap = (items: Exam[]) => {
+  const months = 6;
+  const today = new Date();
+  const monthBuckets = Array.from({ length: months }, (_, i) => {
+    const d = new Date(today.getFullYear(), today.getMonth() - (months - 1 - i), 1);
+    return {
+      label: d.toLocaleDateString('el-GR', { month: 'short' }),
+      key: `${d.getFullYear()}-${d.getMonth()}` // unique key for grouping
+    };
+  });
 
-const monthLabels = ['Σεπ', 'Οκτ', 'Νοε', 'Δεκ', 'Ιαν', 'Φεβ'];
+  // 1. Group items by Topic
+  const topicMap: Record<string, number[]> = {};
+
+  items.forEach(item => {
+    // Determine topic (fallback to Subject if tag is missing)
+    let topic = item.subject || 'General';
+    // Try to get a more specific topic from tags if available
+    // (Assuming tags[0] is often the main topic)
+    if (item.tags && item.tags.length > 0) {
+      topic = item.tags[0];
+    }
+    // Clean up topic string
+    topic = topic.trim();
+    if (!topic) topic = 'Uncategorized';
+
+    if (!topicMap[topic]) {
+      topicMap[topic] = new Array(months).fill(0);
+    }
+
+    // Determine month index
+    const date = new Date(item.createdAt);
+    const itemKey = `${date.getFullYear()}-${date.getMonth()}`;
+
+    const monthIndex = monthBuckets.findIndex(m => m.key === itemKey);
+    if (monthIndex !== -1) {
+      topicMap[topic][monthIndex]++;
+    }
+  });
+
+  // 2. Convert to array and sort by total activity
+  const heatmap = Object.entries(topicMap)
+    .map(([topic, counts]) => ({
+      topic,
+      months: counts,
+      total: counts.reduce((a, b) => a + b, 0)
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 8); // Top 8 topics
+
+  return {
+    data: heatmap.length > 0 ? heatmap : [{ topic: 'No Data', months: [0, 0, 0, 0, 0, 0], total: 0 }],
+    labels: monthBuckets.map(m => m.label)
+  };
+};
+
+// const monthLabels = ['Σεπ', 'Οκτ', 'Νοε', 'Δεκ', 'Ιαν', 'Φεβ']; // Now dynamic
 
 // ─── Heatmap Cell Color ─────────────────────────────────────────────
 
@@ -113,8 +155,8 @@ const Dashboard: React.FC = () => {
 
   const activityData = useMemo(() => calculateActivity(items), [items]);
 
-  const heatmapData = mockHeatmapData; // Keeping mock for layout stability
-  const maxHeat = Math.max(...heatmapData.flatMap(r => r.months));
+  const { data: heatmapData, labels: monthLabels } = useMemo(() => calculateHeatmap(items), [items]);
+  const maxHeat = Math.max(...heatmapData.flatMap(r => r.months), 1); // Avoid div by zero
 
   return (
     <div className="p-8 max-w-[1600px] mx-auto space-y-8">

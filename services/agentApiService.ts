@@ -22,10 +22,27 @@ function getApiBase(): string {
 
 // ─── Core Fetch Wrapper ─────────────────────────────────────────────
 
+function getGeminiKey(): string | undefined {
+    try {
+        const saved = localStorage.getItem('edutex-settings');
+        if (saved) {
+            const settings = JSON.parse(saved);
+            return settings.geminiApiKey;
+        }
+    } catch { /* ignore */ }
+    return undefined;
+}
+
 async function apiCall<T>(endpoint: string, body: unknown): Promise<T> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const apiKey = getGeminiKey();
+    if (apiKey) {
+        headers['X-Gemini-API-Key'] = apiKey;
+    }
+
     const response = await fetch(`${getApiBase()}${endpoint}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(body),
     });
 
@@ -72,7 +89,15 @@ export async function fetchAgentCatalog(): Promise<AgentInfo[]> {
 // ─── Education Agent Calls ──────────────────────────────────────────
 
 export async function apiGenerateExam(params: GenerationParams): Promise<Exam> {
-    return apiCall<Exam>('/api/generate-exam', params);
+    console.log('[AgentApiService] Sending request to /api/generate-exam', params);
+    try {
+        const result = await apiCall<Exam>('/api/generate-exam', params);
+        console.log('[AgentApiService] Raw response from /api/generate-exam:', result);
+        return result;
+    } catch (error) {
+        console.error('[AgentApiService] Error calling /api/generate-exam:', error);
+        throw error;
+    }
 }
 
 export async function apiGenerateExercises(params: ExerciseParams): Promise<{ exercises: ExerciseResult[]; count: number }> {

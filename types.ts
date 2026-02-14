@@ -57,6 +57,11 @@ export interface Question {
 export interface Exam {
   id: string;
   title: string;
+  subtitle?: string;
+  headerInfo?: string; // Custom header line (e.g. "Grade 10 • Mathematics • Date")
+  studentName?: string; // Pre-filled student name
+  studentClass?: string; // Pre-filled class
+  examDate?: string; // Specific exam date
   subject: string;
   gradeLevel: string;
   durationMinutes: number;
@@ -83,6 +88,7 @@ export interface GenerationParams {
   style?: 'standard' | 'panhellenic';
   templateStyle?: 'classic' | 'modern' | 'scientific';
   mainColor?: string;
+  solutionsMode?: 'none' | 'inline' | 'separate';
 }
 
 export interface ExerciseParams {

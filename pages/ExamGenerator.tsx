@@ -93,6 +93,13 @@ const ExamGenerator: React.FC = () => {
 
         if (agent.id === 'exercise-generator') {
           // This is the main generation call (dual-mode)
+          console.log('[ExamGenerator] Calling generateExam with params:', {
+            topic: currentTopic,
+            gradeLevel: grade,
+            difficulty: difficulty,
+            questionCount: questionCount
+          });
+
           const generatedExam = await generateExam({
             topic: currentTopic,
             gradeLevel: grade,
@@ -106,6 +113,14 @@ const ExamGenerator: React.FC = () => {
             templateStyle: templateConfig.style as 'classic' | 'modern' | 'scientific',
             mainColor: templateConfig.mainColor,
           });
+
+          console.log('[ExamGenerator] Received exam from service:', generatedExam);
+
+          if (!generatedExam || !generatedExam.questions || generatedExam.questions.length === 0) {
+            console.error('[ExamGenerator] Exam is empty or invalid!', generatedExam);
+            alert('Warning: API returned an empty exam.');
+          }
+
           setExam(generatedExam);
         } else {
           await wait(500 + Math.random() * 400);
@@ -125,6 +140,20 @@ const ExamGenerator: React.FC = () => {
   const getLatexSource = () => {
     if (!exam) return '';
     return generateLatexFromExam(exam, templateConfig);
+  };
+
+  const handleDownloadSource = () => {
+    if (!exam) return;
+    const source = getLatexSource();
+    const blob = new Blob([source], { type: 'application/x-latex' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `exam-${new Date().toISOString().slice(0, 10)}.tex`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -336,8 +365,8 @@ const ExamGenerator: React.FC = () => {
             }}>
               <Save className="h-4 w-4" /> Save
             </Button>
-            <Button size="sm" className="gap-2" disabled={!exam}>
-              <Download className="h-4 w-4" /> Export PDF
+            <Button size="sm" className="gap-2" disabled={!exam} onClick={handleDownloadSource}>
+              <Download className="h-4 w-4" /> Export LaTeX
             </Button>
           </div>
         </div>
@@ -393,7 +422,12 @@ const ExamGenerator: React.FC = () => {
           )}
 
           {exam && activeTab === 'preview' && (
-            <PdfPreview exam={exam} />
+            <PdfPreview
+              exam={exam}
+              onExamChange={setExam}
+              templateConfig={templateConfig}
+              onConfigChange={setTemplateConfig}
+            />
           )}
 
           {exam && activeTab === 'time' && (

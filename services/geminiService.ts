@@ -76,7 +76,7 @@ export const generateExam = async (params: GenerationParams): Promise<Exam> => {
 async function generateExamViaGemini(params: GenerationParams): Promise<Exam> {
   const ai = getAi(); // Initialize here
 
-  let modelId = 'gemini-1.5-flash-latest';
+  let modelId = 'gemini-2.0-flash';
   try {
     const saved = localStorage.getItem('edutex-settings');
     if (saved) {
