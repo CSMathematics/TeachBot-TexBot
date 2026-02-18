@@ -56,9 +56,8 @@ export const DocumentEditor: React.FC<DocumentEditorProps> = ({
 
                 <div className="flex items-center gap-2">
                     <LatexFixer
-                        currentLatex={code}
+                        code={code}
                         onFix={setCode}
-                        context={title}
                     />
                     <Button variant="outline" size="sm" onClick={handleDownload}>
                         <Download className="w-4 h-4 mr-2" />

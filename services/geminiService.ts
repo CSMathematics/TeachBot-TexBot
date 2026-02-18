@@ -96,6 +96,8 @@ async function generateExamViaGemini(params: GenerationParams): Promise<Exam> {
 
     Generate a JSON response representing a full exam with ${params.questionCount} questions.
     Difficulty Level: ${params.difficulty} (on a scale of 1-5, where 5 is Olympiad level).
+    ${params.difficultyDistribution ? `Difficulty Distribution: ${params.difficultyDistribution.easy}% Easy, ${params.difficultyDistribution.medium}% Medium, ${params.difficultyDistribution.hard}% Hard.` : ''}
+    ${params.exerciseTypes && params.exerciseTypes.length > 0 ? `Include ONLY the following exercise types: ${params.exerciseTypes.join(', ')}.` : ''}
     
     The response MUST strictly follow this schema:
     {
@@ -162,7 +164,7 @@ async function generateExamViaGemini(params: GenerationParams): Promise<Exam> {
 /** Suggest prerequisites for a syllabus node using Gemini */
 export const getPrerequisiteSuggestion = async (title: string, type: string, context?: string): Promise<string> => {
   const ai = getAi();
-  
+
   // Get model from settings or use a valid default
   let modelId = 'gemini-1.5-flash-latest';
   try {
@@ -172,7 +174,7 @@ export const getPrerequisiteSuggestion = async (title: string, type: string, con
       if (s.geminiModel) modelId = s.geminiModel;
     }
   } catch { }
-  
+
   const prompt = `
     Ως ειδικός παιδαγωγός μαθηματικών/φυσικής, πρότεινε προαπαιτούμενες γνώσεις για την ενότητα: "${title}" (${type}).
     ${context ? `Πλαίσιο: ${context}` : ''}

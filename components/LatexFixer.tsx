@@ -1,18 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, Textarea, Card, CardHeader, CardTitle, CardContent } from '../components/ui';
 import { RefreshCw, CheckCircle, AlertTriangle, Wand2, Copy } from 'lucide-react';
 import { apiFixLatex } from '../services/agentApiService';
 
 interface LatexFixerProps {
-    initialCode?: string;
+    code?: string;
     onFix?: (fixedCode: string) => void;
 }
 
-const LatexFixer: React.FC<LatexFixerProps> = ({ initialCode = '', onFix }) => {
-    const [code, setCode] = useState(initialCode);
+const LatexFixer: React.FC<LatexFixerProps> = ({ code: propCode = '', onFix }) => {
+    const [code, setCode] = useState(propCode);
     const [errorLog, setErrorLog] = useState('');
     const [loading, setLoading] = useState(false);
     const [fixedCode, setFixedCode] = useState('');
+
+    useEffect(() => {
+        setCode(propCode);
+    }, [propCode]);
 
     const handleFix = async () => {
         if (!code) return;

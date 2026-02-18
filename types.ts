@@ -80,6 +80,14 @@ export interface Exam {
 
 // ─── Generation Parameters ──────────────────────────────────────────
 
+export type ExerciseType = 'theory' | 'application' | 'proof' | 'true-false' | 'matching' | 'mixed';
+
+export interface DifficultyDistribution {
+  easy: number;   // Percentage
+  medium: number;
+  hard: number;
+}
+
 export interface QuestionTopic {
   id: string;
   topic: string;
@@ -100,9 +108,11 @@ export interface GenerationParams {
   includeHints?: boolean;
   includeMultiMethod?: boolean;
   style?: 'standard' | 'panhellenic';
+  difficultyDistribution?: DifficultyDistribution; // Feature 2
   templateStyle?: 'classic' | 'modern' | 'scientific';
   mainColor?: string;
   solutionsMode?: 'none' | 'inline' | 'separate';
+  exerciseTypes?: ExerciseType[];
 }
 
 export interface SectionExerciseCount {
@@ -115,9 +125,11 @@ export interface SectionExerciseCount {
 export interface ExerciseParams {
   topic: string;
   difficulty: string; // 'easy' | 'medium' | 'hard'
+  difficultyDistribution?: DifficultyDistribution; // Feature 2
   count: number;
   mode?: 'practice' | 'remedial';
   mistakes?: string[];
+  exerciseTypes?: ExerciseType[];
 }
 
 export interface VariantParams {

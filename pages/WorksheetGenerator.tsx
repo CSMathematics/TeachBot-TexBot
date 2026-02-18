@@ -1,36 +1,36 @@
 import React, { useState } from 'react';
-import { ChevronLeft, Wand2, RefreshCw, Save, Download, Copy, Clock, BookOpen, Lightbulb, AlertTriangle, Stethoscope } from 'lucide-react';
+import { ChevronLeft, Wand2, RefreshCw, Save, Download, Copy, Clock, BookOpen, Lightbulb, AlertTriangle, Stethoscope, Wrench, CheckSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Button, Input, Select, Label, Card, CardHeader, CardTitle, CardContent, Tabs, TabsList, TabsTrigger } from '../components/ui';
+import { Button, Input, Select, Label, Card, CardHeader, CardTitle, CardContent } from '../components/ui';
 import AgentCard from '../components/AgentCard';
 import PdfPreview from '../components/PdfPreview';
 import DifficultySlider from '../components/DifficultySlider';
 import TimeCalibration from '../components/TimeCalibration';
 import TopicSelector from '../components/TopicSelector';
-import { Agent, AgentStatus, AgentDomain, Exam, Question, SectionExerciseCount } from '../types';
+import { Agent, AgentStatus, AgentDomain, Exam, Question, SectionExerciseCount, ExerciseType, DifficultyDistribution } from '../types';
 import PrerequisiteChecker from '../components/PrerequisiteChecker';
 import SectionExerciseList, { resolveSyllabusNodes, syncSectionExerciseCounts } from '../components/SectionExerciseList';
+import ExerciseTypeSelector from '../components/ExerciseTypeSelector';
+import DifficultyDistributionSelector from '../components/DifficultyDistributionSelector';
 import { apiGenerateExercises } from '../services/agentApiService';
 import { useSettings } from '../contexts/SettingsContext';
 import { cn } from '../lib/utils';
-import { generateLatexFromExam } from '../lib/latexGenerator';
 import TemplateConfigurator from '../components/TemplateConfigurator';
-import { DEFAULT_TEMPLATE_CONFIG, TemplateConfig } from '../services/templateService';
 import LatexFixer from '../components/LatexFixer';
 import { Dialog, DialogContent } from '../components/ui';
+import { useGeneratorPipeline } from '../hooks/useGeneratorPipeline';
+import { useToast } from '../components/Toast';
 
 const WorksheetGenerator: React.FC = () => {
     const { settings } = useSettings();
+    const { toast } = useToast();
 
-    const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<{ exercises: any[]; count: number } | null>(null);
-    const [activeTab, setActiveTab] = useState('preview');
 
     // Params - read defaults from settings
     const [mode, setMode] = useState<'practice' | 'remedial'>('practice');
     const [mistakes, setMistakes] = useState('');
-    const [templateConfig, setTemplateConfig] = useState<TemplateConfig>(DEFAULT_TEMPLATE_CONFIG);
-    const [fixerOpen, setFixerOpen] = useState(false);
+    const [includeSolutions, setIncludeSolutions] = useState(settings.showSolutions);
 
     const [topic, setTopic] = useState('Άλγεβρα: Εξισώσεις & Ανισώσεις - Εξισώσεις 2ου βαθμού');
     const [manualTopic, setManualTopic] = useState('');
@@ -39,10 +39,15 @@ const WorksheetGenerator: React.FC = () => {
 
     const [grade, setGrade] = useState(settings.defaultGradeLevel);
     const [difficulty, setDifficulty] = useState(50);
+    const [difficultyMode, setDifficultyMode] = useState<'simple' | 'advanced'>('simple');
+    const [difficultyDist, setDifficultyDist] = useState<DifficultyDistribution>({ easy: 30, medium: 50, hard: 20 });
+
     const [exerciseCount, setExerciseCount] = useState(5);
     const [duration, setDuration] = useState(45);
     const [includeHints, setIncludeHints] = useState(false);
+
     const [includePitfalls, setIncludePitfalls] = useState(false);
+    const [exerciseTypes, setExerciseTypes] = useState<ExerciseType[]>([]);
 
     // Per-section exercise count
     const [exerciseCountMode, setExerciseCountMode] = useState<'global' | 'per-section'>('global');
@@ -72,22 +77,22 @@ const WorksheetGenerator: React.FC = () => {
         return base;
     };
 
-    const [agents, setAgents] = useState<Agent[]>(getActiveAgents());
+    // Shared pipeline hook
+    const pipeline = useGeneratorPipeline(getActiveAgents);
+    const { loading, activeTab, agents, templateConfig, fixerOpen } = pipeline;
 
-    const refreshAgents = () => setAgents(getActiveAgents());
+    const refreshAgents = () => pipeline.setAgents(getActiveAgents());
 
     const handleGenerate = async () => {
         const wait = (ms: number) => new Promise(res => setTimeout(res, ms));
-        const currentAgents = getActiveAgents();
-        setAgents(currentAgents);
-        setLoading(true);
+        const currentAgents = pipeline.startAgentPipeline(getActiveAgents);
         setResult(null);
 
         const currentTopic = useManualTopic ? manualTopic : topic;
 
         try {
             for (const agent of currentAgents) {
-                setAgents(prev => prev.map(a => a.id === agent.id ? { ...a, status: AgentStatus.WORKING } : a));
+                pipeline.markAgent(agent.id, AgentStatus.WORKING);
 
                 if (agent.id === 'exercise-generator') {
                     const diffLabel = difficulty < 25 ? 'easy' : difficulty < 50 ? 'medium' : difficulty < 75 ? 'hard' : 'advanced';
@@ -106,7 +111,8 @@ const WorksheetGenerator: React.FC = () => {
                                 difficulty: diffLabel,
                                 count: sec.count,
                                 mode,
-                                mistakes: mode === 'remedial' ? mistakes.split('\n').filter(Boolean) : undefined
+                                mistakes: mode === 'remedial' ? mistakes.split('\n').filter(Boolean) : undefined,
+                                exerciseTypes: exerciseTypes.length > 0 ? exerciseTypes : undefined
                             });
 
                             if (apiResult.exercises?.length > 0) {
@@ -115,13 +121,41 @@ const WorksheetGenerator: React.FC = () => {
                         }
 
                         if (allExercises.length === 0) {
-                            alert('Δεν δημιουργήθηκαν ασκήσεις.');
+                            toast('Δεν δημιουργήθηκαν ασκήσεις. Δοκιμάστε ξανά.', 'error');
                             throw new Error('No exercises generated');
                         }
 
                         setResult({ exercises: allExercises, count: allExercises.length });
+                        setResult({ exercises: allExercises, count: allExercises.length });
+                    } else if (exerciseCountMode === 'global' && difficultyMode === 'advanced') {
+                        // Global Advanced Mode: Split into 3 parallel calls
+                        console.log('[WorksheetGenerator] Global Advanced Mode: Splitting by difficulty');
+
+                        // Calculate counts
+                        const countEasy = Math.round(exerciseCount * (difficultyDist.easy / 100));
+                        const countMedium = Math.round(exerciseCount * (difficultyDist.medium / 100));
+                        let countHard = exerciseCount - countEasy - countMedium;
+                        // Adjust if rounding caused negative hard (rare but possible with low count)
+                        if (countHard < 0) { countHard = 0; } // Should not happen with well-behaved rounding but safety first
+
+                        const requests = [];
+                        if (countEasy > 0) requests.push({ diff: 'easy', count: countEasy });
+                        if (countMedium > 0) requests.push({ diff: 'medium', count: countMedium });
+                        if (countHard > 0) requests.push({ diff: 'hard', count: countHard });
+
+                        const results = await Promise.all(requests.map(req => apiGenerateExercises({
+                            topic: currentTopic,
+                            difficulty: req.diff,
+                            count: req.count,
+                            mode,
+                            mistakes: mode === 'remedial' ? mistakes.split('\n').filter(Boolean) : undefined,
+                            exerciseTypes: exerciseTypes.length > 0 ? exerciseTypes : undefined
+                        })));
+
+                        const allExercises = results.flatMap(r => r.exercises || []);
+                        setResult({ exercises: allExercises, count: allExercises.length });
                     } else {
-                        // Global mode: single call (existing behavior)
+                        // Global Simple Mode: single call
                         let exercises: any[];
                         try {
                             const apiResult = await apiGenerateExercises({
@@ -129,7 +163,8 @@ const WorksheetGenerator: React.FC = () => {
                                 difficulty: diffLabel,
                                 count: exerciseCount,
                                 mode,
-                                mistakes: mode === 'remedial' ? mistakes.split('\n').filter(Boolean) : undefined
+                                mistakes: mode === 'remedial' ? mistakes.split('\n').filter(Boolean) : undefined,
+                                exerciseTypes: exerciseTypes.length > 0 ? exerciseTypes : undefined
                             });
                             exercises = apiResult.exercises;
                         } catch (error) {
@@ -142,13 +177,14 @@ const WorksheetGenerator: React.FC = () => {
                     await wait(300 + Math.random() * 200);
                 }
 
-                setAgents(prev => prev.map(a => a.id === agent.id ? { ...a, status: AgentStatus.COMPLETED } : a));
+                pipeline.markAgent(agent.id, AgentStatus.COMPLETED);
             }
         } catch (error) {
             console.error(error);
-            setAgents(prev => prev.map(a => ({ ...a, status: AgentStatus.ERROR })));
+            pipeline.markAllAgentsError();
+            toast(`Αποτυχία δημιουργίας: ${error instanceof Error ? error.message : String(error)}`, 'error');
         } finally {
-            setLoading(false);
+            pipeline.setLoading(false);
         }
     };
 
@@ -195,9 +231,11 @@ const WorksheetGenerator: React.FC = () => {
         setResult({ ...result, exercises: updatedExercises });
     };
 
-    const getLatexSource = () => {
-        if (!mockExam) return '';
-        return generateLatexFromExam(mockExam, templateConfig);
+    const getLatexSource = () => pipeline.getLatexSource(mockExam);
+
+    const handleDownloadSource = () => {
+        pipeline.handleDownloadSource(mockExam, 'worksheet');
+        toast('Το αρχείο .tex κατέβηκε!', 'success');
     };
 
     return (
@@ -331,9 +369,39 @@ const WorksheetGenerator: React.FC = () => {
 
                         {/* Difficulty Slider */}
                         <div className="space-y-2 pt-1">
-                            <Label>Δυσκολία</Label>
-                            <DifficultySlider value={difficulty} onChange={setDifficulty} showDistribution={true} />
+                            <div className="flex items-center justify-between">
+                                <Label>Δυσκολία</Label>
+                                <div className="flex bg-muted rounded-md p-0.5">
+                                    <button
+                                        onClick={() => setDifficultyMode('simple')}
+                                        className={cn(
+                                            "text-[10px] font-medium px-2 py-0.5 rounded-sm transition-all",
+                                            difficultyMode === 'simple' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        Απλός
+                                    </button>
+                                    <button
+                                        onClick={() => setDifficultyMode('advanced')}
+                                        className={cn(
+                                            "text-[10px] font-medium px-2 py-0.5 rounded-sm transition-all",
+                                            difficultyMode === 'advanced' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                                        )}
+                                    >
+                                        Σύνθετος
+                                    </button>
+                                </div>
+                            </div>
+
+                            {difficultyMode === 'simple' ? (
+                                <DifficultySlider value={difficulty} onChange={setDifficulty} showDistribution={true} />
+                            ) : (
+                                <DifficultyDistributionSelector value={difficultyDist} onChange={setDifficultyDist} />
+                            )}
                         </div>
+
+                        {/* Exercise Types */}
+                        <ExerciseTypeSelector selected={exerciseTypes} onChange={setExerciseTypes} />
 
                         <div className="space-y-2">
                             {/* Exercise Count Mode Toggle */}
@@ -396,6 +464,12 @@ const WorksheetGenerator: React.FC = () => {
                             <Label className="text-muted-foreground text-xs uppercase tracking-wider font-semibold">Επιλογές</Label>
 
                             <label className="flex items-center gap-3 cursor-pointer group">
+                                <input type="checkbox" checked={includeSolutions} onChange={(e) => { setIncludeSolutions(e.target.checked); setTimeout(refreshAgents, 0); }} className="accent-primary w-4 h-4" />
+                                <CheckSquare size={14} className="text-emerald-500" />
+                                <span className="text-sm group-hover:text-foreground text-muted-foreground transition-colors">Λύσεις</span>
+                            </label>
+
+                            <label className="flex items-center gap-3 cursor-pointer group">
                                 <input type="checkbox" checked={includeHints} onChange={(e) => { setIncludeHints(e.target.checked); setTimeout(refreshAgents, 0); }} className="accent-primary w-4 h-4" />
                                 <Lightbulb size={14} className="text-amber-500" />
                                 <span className="text-sm group-hover:text-foreground text-muted-foreground transition-colors">Υποδείξεις (Hints)</span>
@@ -411,7 +485,7 @@ const WorksheetGenerator: React.FC = () => {
 
                     {/* Template Configurator */}
                     <div className="pt-3 border-t border-border">
-                        <TemplateConfigurator config={templateConfig} onChange={setTemplateConfig} />
+                        <TemplateConfigurator config={templateConfig} onChange={pipeline.setTemplateConfig} />
                     </div>
 
                     <div className="space-y-2">
@@ -439,19 +513,19 @@ const WorksheetGenerator: React.FC = () => {
                 <div className="h-14 border-b border-border bg-background flex items-center justify-between px-6">
                     <div className="flex bg-muted rounded-md p-1">
                         <button
-                            onClick={() => setActiveTab('preview')}
+                            onClick={() => pipeline.setActiveTab('preview')}
                             className={cn("text-sm font-medium px-3 py-1 rounded-sm transition-all", activeTab === 'preview' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
                         >
                             Preview
                         </button>
                         <button
-                            onClick={() => setActiveTab('code')}
+                            onClick={() => pipeline.setActiveTab('code')}
                             className={cn("text-sm font-medium px-3 py-1 rounded-sm transition-all", activeTab === 'code' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
                         >
                             LaTeX
                         </button>
                         <button
-                            onClick={() => setActiveTab('time')}
+                            onClick={() => pipeline.setActiveTab('time')}
                             className={cn("text-sm font-medium px-3 py-1 rounded-sm transition-all flex items-center gap-1.5", activeTab === 'time' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
                         >
                             <Clock size={13} /> Χρόνος
@@ -460,21 +534,21 @@ const WorksheetGenerator: React.FC = () => {
                     <div className="flex items-center gap-2">
                         <Button variant="outline" size="sm" className="gap-2" disabled={!result} onClick={() => {
                             if (mockExam) {
-                                const examToSave = {
-                                    ...mockExam,
+                                const extraData = {
                                     type: 'worksheet' as const,
                                     tags: [topic.toLowerCase(), 'worksheet', ...getActiveAgents().filter(a => a.status === AgentStatus.COMPLETED).map(a => a.id)],
                                     agents: getActiveAgents().filter(a => a.status === AgentStatus.COMPLETED).map(a => a.id),
                                     difficulty: difficulty
                                 };
-                                import('../services/storageService').then(s => s.saveExam(examToSave));
-                                alert('Το φυλλάδιο αποθηκεύτηκε στη βιβλιοθήκη!');
+                                if (pipeline.handleSave(mockExam, extraData)) {
+                                    toast('Αποθηκεύτηκε στη βιβλιοθήκη!', 'success');
+                                }
                             }
                         }}>
                             <Save className="h-4 w-4" /> Αποθήκευση
                         </Button>
-                        <Button size="sm" className="gap-2" disabled={!result}>
-                            <Download className="h-4 w-4" /> PDF
+                        <Button size="sm" className="gap-2" disabled={!result} onClick={handleDownloadSource}>
+                            <Download className="h-4 w-4" /> Export LaTeX
                         </Button>
                     </div>
                 </div>
@@ -505,7 +579,7 @@ const WorksheetGenerator: React.FC = () => {
                             exam={mockExam}
                             onExamChange={handleExamChange}
                             templateConfig={templateConfig}
-                            onConfigChange={setTemplateConfig}
+                            onConfigChange={pipeline.setTemplateConfig}
                         />
                     )}
 
@@ -513,22 +587,25 @@ const WorksheetGenerator: React.FC = () => {
                         <Card className="w-full max-w-4xl h-fit font-mono text-sm">
                             <CardHeader className="flex flex-row items-center justify-between py-4 border-b">
                                 <CardTitle className="text-base">LaTeX Source</CardTitle>
-                                <Button variant="outline" className="gap-2" onClick={() => {
-                                    if (mockExam) {
-                                        const examToSave = {
-                                            ...mockExam,
-                                            type: 'worksheet' as const,
-                                            tags: [topic.toLowerCase(), 'worksheet', ...getActiveAgents().filter(a => a.status === AgentStatus.COMPLETED).map(a => a.id)],
-                                            agents: getActiveAgents().filter(a => a.status === AgentStatus.COMPLETED).map(a => a.id),
-                                            difficulty: difficulty // Ensure numeric difficulty is saved
-                                        };
-                                        import('../services/storageService').then(s => s.saveExam(examToSave));
-                                        alert('Το φυλλάδιο αποθηκεύτηκε στη βιβλιοθήκη!');
-                                    }
-                                }}>
-                                    <Save size={16} />
-                                    Αποθήκευση
-                                </Button></CardHeader>
+                                <div className="flex items-center gap-2">
+                                    <Button variant="outline" className="gap-2" onClick={async () => {
+                                        if (await pipeline.handleCopyLatex(mockExam)) {
+                                            toast('Αντιγράφηκε!', 'success');
+                                        }
+                                    }}>
+                                        <Copy size={16} />
+                                        Αντιγραφή
+                                    </Button>
+                                    <Button variant="outline" className="gap-2" onClick={() => pipeline.setFixerOpen(true)}>
+                                        <Wrench size={16} /> Fix
+                                    </Button>
+                                </div>
+                                <Dialog open={fixerOpen} onOpenChange={pipeline.setFixerOpen}>
+                                    <DialogContent className="max-w-4xl">
+                                        <LatexFixer code={getLatexSource()} />
+                                    </DialogContent>
+                                </Dialog>
+                            </CardHeader>
                             <CardContent className="p-0 bg-[#282c34]">
                                 <pre className="p-6 overflow-x-auto text-[#abb2bf] leading-relaxed">
                                     {getLatexSource()}

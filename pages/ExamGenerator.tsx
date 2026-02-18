@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { generateExam } from '../services/geminiService';
-import { Exam, Agent, AgentStatus, AgentDomain, QuestionTopic } from '../types';
+import { Exam, Agent, AgentStatus, AgentDomain, QuestionTopic, ExerciseType, DifficultyDistribution } from '../types';
 import AgentCard from '../components/AgentCard';
 import TemplateConfigurator from '../components/TemplateConfigurator';
-import { DEFAULT_TEMPLATE_CONFIG, TemplateConfig } from '../services/templateService';
 import DifficultySlider from '../components/DifficultySlider';
 import TimeCalibration from '../components/TimeCalibration';
 import TopicSelector from '../components/TopicSelector';
@@ -12,17 +11,21 @@ import PrerequisiteChecker from '../components/PrerequisiteChecker';
 import LatexFixer from '../components/LatexFixer';
 import { Save, Download, ChevronLeft, RefreshCw, Wand2, Copy, Clock, Wrench } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Button, Input, Select, Label, Card, CardHeader, CardTitle, CardContent, Tabs, TabsList, TabsTrigger, TabsContent, Dialog, DialogContent } from '../components/ui';
+import { Button, Input, Select, Label, Card, CardHeader, CardTitle, CardContent, Dialog, DialogContent } from '../components/ui';
 import PdfPreview from '../components/PdfPreview';
+import ExerciseTypeSelector from '../components/ExerciseTypeSelector';
+import DifficultyDistributionSelector from '../components/DifficultyDistributionSelector';
 import { cn } from '../lib/utils';
-import { generateLatexFromExam } from '../lib/latexGenerator';
+import { useGeneratorPipeline } from '../hooks/useGeneratorPipeline';
+import { useSettings } from '../contexts/SettingsContext';
+import { useToast } from '../components/Toast';
 
 const ExamGenerator: React.FC = () => {
-  const [loading, setLoading] = useState(false);
+  const { settings } = useSettings();
+  const { toast } = useToast();
   const [exam, setExam] = useState<Exam | null>(null);
-  const [activeTab, setActiveTab] = useState('preview');
 
-  // Params
+  // Params — use settings defaults
   const [topic, setTopic] = useState('Ανάλυση: Παράγωγος - Κανόνες Παραγώγισης');
   const [manualTopic, setManualTopic] = useState('');
   const [useManualTopic, setUseManualTopic] = useState(false);
@@ -40,8 +43,11 @@ const ExamGenerator: React.FC = () => {
     return questionTopics.flatMap(q => q.selectedNodeIds);
   }, [topicMode, selectedNodeIds, questionTopics]);
 
-  const [grade, setGrade] = useState("Γ' Λυκείου");
+  const [grade, setGrade] = useState(settings.defaultGradeLevel);
   const [difficulty, setDifficulty] = useState(50);
+  const [difficultyMode, setDifficultyMode] = useState<'simple' | 'advanced'>('simple');
+  const [difficultyDist, setDifficultyDist] = useState<DifficultyDistribution>({ easy: 30, medium: 50, hard: 20 });
+
   const [duration, setDuration] = useState(120);
   const [questionCount, setQuestionCount] = useState(3);
   const [includeVariants, setIncludeVariants] = useState(false);
@@ -49,8 +55,7 @@ const ExamGenerator: React.FC = () => {
   const [includeRubric, setIncludeRubric] = useState(false);
   const [includeMultiMethod, setIncludeMultiMethod] = useState(false);
   const [style, setStyle] = useState<'standard' | 'panhellenic'>('standard');
-  const [templateConfig, setTemplateConfig] = useState<TemplateConfig>(DEFAULT_TEMPLATE_CONFIG);
-  const [fixerOpen, setFixerOpen] = useState(false);
+  const [exerciseTypes, setExerciseTypes] = useState<ExerciseType[]>([]);
 
 
   // Dynamic agent pipeline based on toggles
@@ -85,18 +90,17 @@ const ExamGenerator: React.FC = () => {
     return base;
   };
 
-  const [agents, setAgents] = useState<Agent[]>(getActiveAgents());
+  // Shared pipeline hook
+  const pipeline = useGeneratorPipeline(getActiveAgents);
+  const { loading, activeTab, agents, templateConfig, fixerOpen } = pipeline;
 
-  // Refresh agents when toggles change
   const refreshAgents = () => {
-    setAgents(getActiveAgents());
+    pipeline.setAgents(getActiveAgents());
   };
 
   const simulateAgentWorkflow = async () => {
     const wait = (ms: number) => new Promise(res => setTimeout(res, ms));
-    const currentAgents = getActiveAgents();
-    setAgents(currentAgents);
-    setLoading(true);
+    const currentAgents = pipeline.startAgentPipeline(getActiveAgents);
     setExam(null);
 
     const currentTopic = useManualTopic ? manualTopic : topic;
@@ -104,6 +108,7 @@ const ExamGenerator: React.FC = () => {
     const baseParams = {
       gradeLevel: grade,
       difficulty: difficulty,
+      difficultyDistribution: difficultyMode === 'advanced' ? difficultyDist : undefined,
       includeSolutions,
       includeVariants,
       includeRubric,
@@ -111,18 +116,19 @@ const ExamGenerator: React.FC = () => {
       style,
       templateStyle: templateConfig.style as 'classic' | 'modern' | 'scientific',
       mainColor: templateConfig.mainColor,
+      exerciseTypes: exerciseTypes.length > 0 ? exerciseTypes : undefined,
     };
 
     try {
       for (const agent of currentAgents) {
-        setAgents(prev => prev.map(a => a.id === agent.id ? { ...a, status: AgentStatus.WORKING } : a));
+        pipeline.markAgent(agent.id, AgentStatus.WORKING);
 
         if (agent.id === 'exercise-generator') {
           if (topicMode === 'per-question' && questionTopics.length > 0) {
             // Validate: skip questions without a topic
             const validTopics = questionTopics.filter(qt => qt.topic && qt.topic.trim() !== '');
             if (validTopics.length === 0) {
-              alert('Παρακαλώ επιλέξτε ύλη για τουλάχιστον ένα θέμα.');
+              toast('Παρακαλώ επιλέξτε ύλη για τουλάχιστον ένα θέμα.', 'warning');
               throw new Error('No topics selected');
             }
             if (validTopics.length < questionTopics.length) {
@@ -154,7 +160,7 @@ const ExamGenerator: React.FC = () => {
 
             if (allQuestions.length === 0) {
               console.error('[ExamGenerator] Per-question mode: no questions generated');
-              alert('Warning: API returned no questions.');
+              toast('Δεν δημιουργήθηκαν θέματα. Δοκιμάστε ξανά.', 'error');
             }
 
             const mergedExam: Exam = {
@@ -185,7 +191,7 @@ const ExamGenerator: React.FC = () => {
 
             if (!generatedExam || !generatedExam.questions || generatedExam.questions.length === 0) {
               console.error('[ExamGenerator] Exam is empty or invalid!', generatedExam);
-              alert('Warning: API returned an empty exam.');
+              toast('Το API επέστρεψε κενό διαγώνισμα.', 'warning');
             }
 
             setExam(generatedExam);
@@ -194,34 +200,22 @@ const ExamGenerator: React.FC = () => {
           await wait(500 + Math.random() * 400);
         }
 
-        setAgents(prev => prev.map(a => a.id === agent.id ? { ...a, status: AgentStatus.COMPLETED } : a));
+        pipeline.markAgent(agent.id, AgentStatus.COMPLETED);
       }
     } catch (error) {
       console.error(error);
-      setAgents(prev => prev.map(a => ({ ...a, status: AgentStatus.ERROR })));
-      alert(`Failed to generate exam: ${error instanceof Error ? error.message : String(error)}`);
+      pipeline.markAllAgentsError();
+      toast(`Αποτυχία δημιουργίας: ${error instanceof Error ? error.message : String(error)}`, 'error');
     } finally {
-      setLoading(false);
+      pipeline.setLoading(false);
     }
   };
 
-  const getLatexSource = () => {
-    if (!exam) return '';
-    return generateLatexFromExam(exam, templateConfig);
-  };
+  const getLatexSource = () => pipeline.getLatexSource(exam);
 
   const handleDownloadSource = () => {
-    if (!exam) return;
-    const source = getLatexSource();
-    const blob = new Blob([source], { type: 'application/x-latex' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `exam-${new Date().toISOString().slice(0, 10)}.tex`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    pipeline.handleDownloadSource(exam, 'exam');
+    toast('Το αρχείο .tex κατέβηκε!', 'success');
   };
 
   return (
@@ -371,9 +365,39 @@ const ExamGenerator: React.FC = () => {
 
             {/* Difficulty */}
             <div className="space-y-2 pt-1">
-              <Label>Βαθμός Δυσκολίας</Label>
-              <DifficultySlider value={difficulty} onChange={setDifficulty} />
+              <div className="flex items-center justify-between">
+                <Label>Βαθμός Δυσκολίας</Label>
+                <div className="flex bg-muted rounded-md p-0.5">
+                  <button
+                    onClick={() => setDifficultyMode('simple')}
+                    className={cn(
+                      "text-[10px] font-medium px-2 py-0.5 rounded-sm transition-all",
+                      difficultyMode === 'simple' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Απλός
+                  </button>
+                  <button
+                    onClick={() => setDifficultyMode('advanced')}
+                    className={cn(
+                      "text-[10px] font-medium px-2 py-0.5 rounded-sm transition-all",
+                      difficultyMode === 'advanced' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Σύνθετος
+                  </button>
+                </div>
+              </div>
+
+              {difficultyMode === 'simple' ? (
+                <DifficultySlider value={difficulty} onChange={setDifficulty} />
+              ) : (
+                <DifficultyDistributionSelector value={difficultyDist} onChange={setDifficultyDist} />
+              )}
             </div>
+
+            {/* Exercise Types */}
+            <ExerciseTypeSelector selected={exerciseTypes} onChange={setExerciseTypes} />
 
             {/* Question Count — only visible in global mode */}
             {topicMode === 'global' && (
@@ -451,7 +475,7 @@ const ExamGenerator: React.FC = () => {
             </div>
 
             {/* Template Configurator */}
-            <TemplateConfigurator config={templateConfig} onChange={setTemplateConfig} />
+            <TemplateConfigurator config={templateConfig} onChange={pipeline.setTemplateConfig} />
           </div>
 
           <div className="space-y-2">
@@ -480,19 +504,19 @@ const ExamGenerator: React.FC = () => {
         <div className="h-14 border-b border-border bg-background flex items-center justify-between px-6">
           <div className="flex bg-muted rounded-md p-1">
             <button
-              onClick={() => setActiveTab('preview')}
+              onClick={() => pipeline.setActiveTab('preview')}
               className={cn("text-sm font-medium px-3 py-1 rounded-sm transition-all", activeTab === 'preview' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
             >
               Preview
             </button>
             <button
-              onClick={() => setActiveTab('code')}
+              onClick={() => pipeline.setActiveTab('code')}
               className={cn("text-sm font-medium px-3 py-1 rounded-sm transition-all", activeTab === 'code' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
             >
               LaTeX
             </button>
             <button
-              onClick={() => setActiveTab('time')}
+              onClick={() => pipeline.setActiveTab('time')}
               className={cn("text-sm font-medium px-3 py-1 rounded-sm transition-all flex items-center gap-1.5", activeTab === 'time' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
             >
               <Clock size={13} /> Χρόνος
@@ -500,9 +524,8 @@ const ExamGenerator: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="gap-2" disabled={!exam} onClick={() => {
-              if (exam) {
-                import('../services/storageService').then(s => s.saveExam(exam));
-                alert('Το διαγώνισμα αποθηκεύτηκε στη βιβλιοθήκη!');
+              if (pipeline.handleSave(exam)) {
+                toast('Αποθηκεύτηκε στη βιβλιοθήκη!', 'success');
               }
             }}>
               <Save className="h-4 w-4" /> Save
@@ -539,19 +562,20 @@ const ExamGenerator: React.FC = () => {
             <Card className="w-full max-w-4xl h-fit font-mono text-sm">
               <CardHeader className="flex flex-row items-center justify-between py-4 border-b">
                 <CardTitle className="text-base">LaTeX Source</CardTitle>
-                <Button variant="outline" className="gap-2" onClick={() => {
-                  navigator.clipboard.writeText(getLatexSource());
-                  alert('Copied to clipboard!');
+                <Button variant="outline" className="gap-2" onClick={async () => {
+                  if (await pipeline.handleCopyLatex(exam)) {
+                    toast('Αντιγράφηκε!', 'success');
+                  }
                 }}>
                   <Copy size={16} />
                   Αντιγραφή
                 </Button>
-                <Button variant="outline" className="gap-2" onClick={() => setFixerOpen(true)}>
+                <Button variant="outline" className="gap-2" onClick={() => pipeline.setFixerOpen(true)}>
                   <Wrench size={16} /> Fix
                 </Button>
-                <Dialog open={fixerOpen} onOpenChange={setFixerOpen}>
+                <Dialog open={fixerOpen} onOpenChange={pipeline.setFixerOpen}>
                   <DialogContent className="max-w-4xl">
-                    <LatexFixer initialCode={getLatexSource()} />
+                    <LatexFixer code={getLatexSource()} />
                   </DialogContent>
                 </Dialog>
               </CardHeader>
@@ -568,7 +592,7 @@ const ExamGenerator: React.FC = () => {
               exam={exam}
               onExamChange={setExam}
               templateConfig={templateConfig}
-              onConfigChange={setTemplateConfig}
+              onConfigChange={pipeline.setTemplateConfig}
             />
           )}
 

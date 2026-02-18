@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Select, Label } from './ui';
 import { SyllabusFieldNode, SyllabusChapterNode, SyllabusSectionNode, SyllabusParagraphNode } from '../types';
 import { ChevronRight, ChevronDown, Check, Minus } from 'lucide-react';
@@ -96,12 +96,16 @@ const TopicSelector: React.FC<TopicSelectorProps> = ({ value, onChange, onGradeL
     // Multi-selection state: Set of selected node IDs (chapters, sections, paragraphs)
     const [selected, setSelected] = useState<Set<string>>(new Set());
 
+    // Stable refs for callbacks to avoid infinite re-render loops
+    const onSelectedIdsChangeRef = useRef(onSelectedIdsChange);
+    onSelectedIdsChangeRef.current = onSelectedIdsChange;
+    const onChangeRef = useRef(onChange);
+    onChangeRef.current = onChange;
+
     // Notify parent when selected node IDs change
     useEffect(() => {
-        if (onSelectedIdsChange) {
-            onSelectedIdsChange(Array.from(selected));
-        }
-    }, [selected, onSelectedIdsChange]);
+        onSelectedIdsChangeRef.current?.(Array.from(selected));
+    }, [selected]);
 
     // Expanded state for tree nodes
     const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
@@ -178,16 +182,16 @@ const TopicSelector: React.FC<TopicSelectorProps> = ({ value, onChange, onGradeL
             }
         }
 
-        return `${activeField.Name} → ${parts.join(' | ')}`;
+        return `${activeField.Name}: ${parts.join(' | ')}`;
     }, [activeField, selected]);
 
     // Sync topic string to parent
     useEffect(() => {
         const topicStr = buildTopicString();
         if (topicStr && value !== topicStr) {
-            onChange(topicStr);
+            onChangeRef.current(topicStr);
         }
-    }, [buildTopicString, value, onChange]);
+    }, [buildTopicString, value]);
 
     // Toggle helpers
     const toggleIds = useCallback((ids: string[]) => {
