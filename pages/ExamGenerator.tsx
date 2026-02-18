@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { generateExam } from '../services/geminiService';
-import { Exam, Agent, AgentStatus, AgentDomain } from '../types';
+import { Exam, Agent, AgentStatus, AgentDomain, QuestionTopic } from '../types';
 import AgentCard from '../components/AgentCard';
 import TemplateConfigurator from '../components/TemplateConfigurator';
 import { DEFAULT_TEMPLATE_CONFIG, TemplateConfig } from '../services/templateService';
 import DifficultySlider from '../components/DifficultySlider';
 import TimeCalibration from '../components/TimeCalibration';
 import TopicSelector from '../components/TopicSelector';
+import QuestionTopicList from '../components/QuestionTopicList';
 import PrerequisiteChecker from '../components/PrerequisiteChecker';
 import LatexFixer from '../components/LatexFixer';
 import { Save, Download, ChevronLeft, RefreshCw, Wand2, Copy, Clock, Wrench } from 'lucide-react';
@@ -25,6 +26,19 @@ const ExamGenerator: React.FC = () => {
   const [topic, setTopic] = useState('Ανάλυση: Παράγωγος - Κανόνες Παραγώγισης');
   const [manualTopic, setManualTopic] = useState('');
   const [useManualTopic, setUseManualTopic] = useState(false);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+
+  // Per-question topic selection
+  const [topicMode, setTopicMode] = useState<'global' | 'per-question'>('global');
+  const [questionTopics, setQuestionTopics] = useState<QuestionTopic[]>([
+    { id: crypto.randomUUID(), topic: '', selectedNodeIds: [] },
+  ]);
+
+  // Aggregate selectedNodeIds for PrerequisiteChecker in per-question mode
+  const aggregatedNodeIds = useMemo(() => {
+    if (topicMode === 'global') return selectedNodeIds;
+    return questionTopics.flatMap(q => q.selectedNodeIds);
+  }, [topicMode, selectedNodeIds, questionTopics]);
 
   const [grade, setGrade] = useState("Γ' Λυκείου");
   const [difficulty, setDifficulty] = useState(50);
@@ -87,41 +101,95 @@ const ExamGenerator: React.FC = () => {
 
     const currentTopic = useManualTopic ? manualTopic : topic;
 
+    const baseParams = {
+      gradeLevel: grade,
+      difficulty: difficulty,
+      includeSolutions,
+      includeVariants,
+      includeRubric,
+      includeMultiMethod,
+      style,
+      templateStyle: templateConfig.style as 'classic' | 'modern' | 'scientific',
+      mainColor: templateConfig.mainColor,
+    };
+
     try {
       for (const agent of currentAgents) {
         setAgents(prev => prev.map(a => a.id === agent.id ? { ...a, status: AgentStatus.WORKING } : a));
 
         if (agent.id === 'exercise-generator') {
-          // This is the main generation call (dual-mode)
-          console.log('[ExamGenerator] Calling generateExam with params:', {
-            topic: currentTopic,
-            gradeLevel: grade,
-            difficulty: difficulty,
-            questionCount: questionCount
-          });
+          if (topicMode === 'per-question' && questionTopics.length > 0) {
+            // Validate: skip questions without a topic
+            const validTopics = questionTopics.filter(qt => qt.topic && qt.topic.trim() !== '');
+            if (validTopics.length === 0) {
+              alert('Παρακαλώ επιλέξτε ύλη για τουλάχιστον ένα θέμα.');
+              throw new Error('No topics selected');
+            }
+            if (validTopics.length < questionTopics.length) {
+              console.warn(`[ExamGenerator] ${questionTopics.length - validTopics.length} question(s) skipped: no topic selected`);
+            }
 
-          const generatedExam = await generateExam({
-            topic: currentTopic,
-            gradeLevel: grade,
-            difficulty: difficulty, // Ensure number 0-100 is passed
-            questionCount: questionCount,
-            includeSolutions,
-            includeVariants,
-            includeRubric,
-            includeMultiMethod,
-            style,
-            templateStyle: templateConfig.style as 'classic' | 'modern' | 'scientific',
-            mainColor: templateConfig.mainColor,
-          });
+            // Per-question mode: generate one question per topic, then merge
+            console.log('[ExamGenerator] Per-question mode, generating', validTopics.length, 'questions');
+            const allQuestions: Exam['questions'] = [];
+            let firstResult: Exam | null = null;
 
-          console.log('[ExamGenerator] Received exam from service:', generatedExam);
+            for (const qt of validTopics) {
+              // Use per-question gradeLevel if available, fallback to global
+              const questionGrade = qt.gradeLevel || grade;
+              console.log(`[ExamGenerator] Generating question for topic: ${qt.topic} (grade: ${questionGrade})`);
 
-          if (!generatedExam || !generatedExam.questions || generatedExam.questions.length === 0) {
-            console.error('[ExamGenerator] Exam is empty or invalid!', generatedExam);
-            alert('Warning: API returned an empty exam.');
+              const result = await generateExam({
+                ...baseParams,
+                gradeLevel: questionGrade,
+                topic: qt.topic,
+                questionCount: 1,
+              });
+
+              if (!firstResult) firstResult = result;
+              if (result?.questions?.length > 0) {
+                allQuestions.push(...result.questions);
+              }
+            }
+
+            if (allQuestions.length === 0) {
+              console.error('[ExamGenerator] Per-question mode: no questions generated');
+              alert('Warning: API returned no questions.');
+            }
+
+            const mergedExam: Exam = {
+              ...(firstResult || {} as Exam),
+              id: crypto.randomUUID(),
+              title: `Διαγώνισμα: Πολλαπλές Ενότητες`,
+              questions: allQuestions,
+              createdAt: new Date().toISOString(),
+            };
+
+            setExam(mergedExam);
+          } else {
+            // Global mode: single call (existing behavior)
+            console.log('[ExamGenerator] Global mode, calling generateExam with params:', {
+              topic: currentTopic,
+              gradeLevel: grade,
+              difficulty: difficulty,
+              questionCount: questionCount
+            });
+
+            const generatedExam = await generateExam({
+              ...baseParams,
+              topic: currentTopic,
+              questionCount: questionCount,
+            });
+
+            console.log('[ExamGenerator] Received exam from service:', generatedExam);
+
+            if (!generatedExam || !generatedExam.questions || generatedExam.questions.length === 0) {
+              console.error('[ExamGenerator] Exam is empty or invalid!', generatedExam);
+              alert('Warning: API returned an empty exam.');
+            }
+
+            setExam(generatedExam);
           }
-
-          setExam(generatedExam);
         } else {
           await wait(500 + Math.random() * 400);
         }
@@ -171,68 +239,133 @@ const ExamGenerator: React.FC = () => {
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <div className="space-y-4">
-            {/* Topic Selection */}
+            {/* Topic Mode Toggle */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Θέμα Εξέτασης</Label>
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="h-auto p-0 text-xs"
-                  onClick={() => setUseManualTopic(!useManualTopic)}
+              <Label>Λειτουργία Θεμάτων</Label>
+              <div className="flex bg-muted rounded-md p-1">
+                <button
+                  onClick={() => setTopicMode('global')}
+                  className={cn(
+                    "text-xs font-medium px-3 py-1.5 rounded-sm transition-all flex-1 text-center",
+                    topicMode === 'global'
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
                 >
-                  {useManualTopic ? 'Επιλογή από Ύλη' : 'Χειροκίνητη Εισαγωγή'}
-                </Button>
+                  Για όλο το διαγώνισμα
+                </button>
+                <button
+                  onClick={() => {
+                    setTopicMode('per-question');
+                    // Initialize with current questionCount if empty
+                    if (questionTopics.length === 0 || (questionTopics.length === 1 && !questionTopics[0].topic)) {
+                      const items: QuestionTopic[] = Array.from({ length: questionCount }, () => ({
+                        id: crypto.randomUUID(),
+                        topic: '',
+                        selectedNodeIds: [],
+                      }));
+                      setQuestionTopics(items);
+                    }
+                  }}
+                  className={cn(
+                    "text-xs font-medium px-3 py-1.5 rounded-sm transition-all flex-1 text-center",
+                    topicMode === 'per-question'
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Ανά θέμα
+                </button>
               </div>
-
-              {useManualTopic ? (
-                <Input
-                  value={manualTopic}
-                  onChange={(e) => setManualTopic(e.target.value)}
-                  placeholder="π.χ. Διαγώνισμα Τριμήνου..."
-                />
-              ) : (
-                <TopicSelector
-                  value={topic} // Although recursive selection doesn't use simple string value back easily
-                  onChange={setTopic}
-                />
-              )}
-              {/* Prerequisite Checker Button */}
-              <div className="flex justify-end pt-1">
-                <PrerequisiteChecker topic={useManualTopic ? manualTopic : topic} grade={grade} />
-              </div>
-
-              {(useManualTopic ? manualTopic : topic) && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Επιλεγμένο: {useManualTopic ? manualTopic : topic}
-                </p>
-              )}
             </div>
 
-            {/* Grade & Duration */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Τάξη</Label>
-                <Select value={grade} onChange={(e) => setGrade(e.target.value)}>
-                  <option>Α' Λυκείου</option>
-                  <option>Β' Λυκείου</option>
-                  <option>Γ' Λυκείου</option>
-                </Select>
+            {/* Topic Selection */}
+            <div className="space-y-2">
+              {topicMode === 'global' && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <Label>Θέμα Εξέτασης</Label>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs"
+                      onClick={() => setUseManualTopic(!useManualTopic)}
+                    >
+                      {useManualTopic ? 'Επιλογή από Ύλη' : 'Χειροκίνητη Εισαγωγή'}
+                    </Button>
+                  </div>
+
+                  {useManualTopic ? (
+                    <Input
+                      value={manualTopic}
+                      onChange={(e) => setManualTopic(e.target.value)}
+                      placeholder="π.χ. Διαγώνισμα Τριμήνου..."
+                    />
+                  ) : (
+                    <TopicSelector
+                      value={topic}
+                      onChange={setTopic}
+                      onGradeLevelChange={(gl) => setGrade(gl)}
+                      onSelectedIdsChange={setSelectedNodeIds}
+                    />
+                  )}
+
+                  {(useManualTopic ? manualTopic : topic) && (
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2" title={useManualTopic ? manualTopic : topic}>
+                      Επιλεγμένο: {useManualTopic ? manualTopic : topic}
+                    </p>
+                  )}
+                </>
+              )}
+
+              {topicMode === 'per-question' && (
+                <QuestionTopicList
+                  items={questionTopics}
+                  onChange={setQuestionTopics}
+                  onGradeLevelChange={(gl) => setGrade(gl)}
+                />
+              )}
+
+              {/* Prerequisite Checker Button */}
+              <div className="flex justify-end pt-1">
+                <PrerequisiteChecker selectedNodeIds={aggregatedNodeIds} />
               </div>
-              <div className="space-y-2">
-                <Label>Διάρκεια</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    min={30}
-                    max={180}
-                    step={15}
-                    value={duration}
-                    onChange={(e) => setDuration(Number(e.target.value))}
-                    className="w-full"
-                  />
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">λεπτά</span>
-                </div>
+            </div>
+
+            {/* Grade Level (auto-filled from syllabus, overridable) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Βαθμίδα</Label>
+                {!useManualTopic && (
+                  <span className="text-[10px] text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+                    auto-fill από ύλη
+                  </span>
+                )}
+              </div>
+              <Select value={grade} onChange={(e) => setGrade(e.target.value)}>
+                <option>Α' Γυμνασίου</option>
+                <option>Β' Γυμνασίου</option>
+                <option>Γ' Γυμνασίου</option>
+                <option>Α' Λυκείου</option>
+                <option>Β' Λυκείου</option>
+                <option>Γ' Λυκείου</option>
+              </Select>
+            </div>
+
+            {/* Duration */}
+            <div className="space-y-2">
+              <Label>Διάρκεια</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={30}
+                  max={180}
+                  step={15}
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value))}
+                  className="w-full"
+                />
+                <span className="text-xs text-muted-foreground whitespace-nowrap">λεπτά</span>
               </div>
             </div>
 
@@ -242,22 +375,31 @@ const ExamGenerator: React.FC = () => {
               <DifficultySlider value={difficulty} onChange={setDifficulty} />
             </div>
 
-            {/* Question Count */}
-            <div className="space-y-2">
-              <Label>Πλήθος Θεμάτων ({questionCount})</Label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="1"
-                  max="6"
-                  step="1"
-                  value={questionCount}
-                  onChange={(e) => setQuestionCount(Number(e.target.value))}
-                  className="flex-1 accent-primary h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
-                />
-                <span className="text-sm font-medium w-4 text-center">{questionCount}</span>
+            {/* Question Count — only visible in global mode */}
+            {topicMode === 'global' && (
+              <div className="space-y-2">
+                <Label>Πλήθος Θεμάτων ({questionCount})</Label>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="range"
+                    min="1"
+                    max="6"
+                    step="1"
+                    value={questionCount}
+                    onChange={(e) => setQuestionCount(Number(e.target.value))}
+                    className="flex-1 accent-primary h-2 bg-secondary rounded-lg appearance-none cursor-pointer"
+                  />
+                  <span className="text-sm font-medium w-4 text-center">{questionCount}</span>
+                </div>
               </div>
-            </div>
+            )}
+            {topicMode === 'per-question' && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="font-medium">Πλήθος Θεμάτων:</span>
+                <span className="text-foreground font-semibold">{questionTopics.length}</span>
+                <span>(διαχείριση από τη λίστα παραπάνω)</span>
+              </div>
+            )}
 
             {/* Options */}
             <div className="space-y-3 pt-3 border-t border-border">

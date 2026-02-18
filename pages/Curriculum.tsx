@@ -1,12 +1,17 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-    BookOpen, ChevronRight, ChevronDown, Search, Layers, Hash,
-    Library, BarChart3, FileText, Grid3X3
+    Plus, Trash2, Pencil, ChevronRight, ChevronDown, LayoutGrid, BookOpen, Layers, Menu, Loader2, List,
+    Search, Hash, Library, BarChart3, FileText, Grid3X3, AlertTriangle, Info
 } from 'lucide-react';
 import { Card, CardContent, Badge } from '../components/ui';
 import { cn } from '../lib/utils';
-import { getSyllabusTree, getSyllabusStats, searchSections } from '../services/syllabusService';
-import type { SyllabusFieldNode, SyllabusChapterNode, SyllabusSectionNode } from '../types';
+import { getSyllabusStats, searchSections } from '../services/syllabusService';
+import type { SyllabusFieldNode, SyllabusChapterNode, SyllabusSectionNode, SyllabusParagraphNode } from '../types';
+import AddNodeDialog from '../components/AddNodeDialog';
+import EditNodeDialog from '../components/EditNodeDialog';
+import { ExerciseTypeManager } from '../components/ExerciseTypeManager';
+import ParagraphContentManager from '../components/ParagraphContentManager';
 
 // ─── Field Colors ───────────────────────────────────────────────────
 
@@ -23,15 +28,99 @@ const getFieldColor = (fieldId: string) => FIELD_COLORS[fieldId] ?? FIELD_COLORS
 // ─── Component ──────────────────────────────────────────────────────
 
 const Curriculum: React.FC = () => {
-    const tree = useMemo(() => getSyllabusTree(), []);
-    const stats = useMemo(() => getSyllabusStats(), []);
+    const navigate = useNavigate();
+    const [syllabuses, setSyllabuses] = useState<{ id: string, name: string }[]>([]);
+    const [selectedSyllabusId, setSelectedSyllabusId] = useState<string | null>(null);
+    const [tree, setTree] = useState<SyllabusFieldNode[]>([]);
+    const [stats, setStats] = useState({ fields: 0, chapters: 0, sections: 0, exerciseTypes: 0 });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // Dialog State
+    const [addingNode, setAddingNode] = useState<{ type: 'FIELD' | 'CHAPTER' | 'SECTION' | 'PARAGRAPH', parentId: string | null } | null>(null);
+    const [editingNode, setEditingNode] = useState<{ id: string, title: string, type: 'FIELD' | 'CHAPTER' | 'SECTION' | 'PARAGRAPH', contentType?: 'THEORY' | 'METHODOLOGY', prerequisites?: string } | null>(null);
+    const [managingParagraph, setManagingParagraph] = useState<SyllabusParagraphNode | null>(null);
+
+    const refreshTree = async () => {
+        if (!selectedSyllabusId) return;
+        try {
+            const { fetchSyllabusTree, getSyllabusStats } = await import('../services/syllabusService');
+            const data = await fetchSyllabusTree(selectedSyllabusId);
+            setTree(data);
+            setStats(getSyllabusStats());
+        } catch (err) {
+            console.error("Failed to refresh tree:", err);
+        }
+    };
+
+    const handleDelete = async (id: string, type: string) => {
+        if (!window.confirm(`Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το ${type}; Θα διαγραφούν και όλα τα περιεχόμενά του.`)) {
+            return;
+        }
+
+        try {
+            const { deleteNode } = await import('../services/syllabusService');
+            await deleteNode(id);
+            refreshTree();
+            // If we deleted the selected field, deselect it
+            if (id === selectedField) setSelectedField(null);
+        } catch (err) {
+            console.error("Failed to delete node:", err);
+            alert("Σφάλμα κατά τη διαγραφή.");
+        }
+    };
+
+    // Initial Load: Fetch Syllabuses
+    useEffect(() => {
+        const loadSyllabuses = async () => {
+            try {
+                const { fetchAllSyllabuses } = await import('../services/syllabusService');
+                const list = await fetchAllSyllabuses();
+                setSyllabuses(list);
+
+                if (list.length > 0) {
+                    // Default to the last created/modified or first one
+                    // For now, first one.
+                    setSelectedSyllabusId(list[0].id);
+                } else {
+                    setLoading(false); // Stop loading if empty
+                }
+            } catch (err) {
+                console.error("Failed to load syllabuses:", err);
+                setError("Failed to load syllabuses.");
+                setLoading(false);
+            }
+        };
+        loadSyllabuses();
+    }, []);
+
+    // Load Tree when Syllabus changes
+    useEffect(() => {
+        if (!selectedSyllabusId) return;
+
+        const loadTree = async () => {
+            setLoading(true);
+            try {
+                const { fetchSyllabusTree, getSyllabusStats } = await import('../services/syllabusService');
+                const data = await fetchSyllabusTree(selectedSyllabusId);
+                setTree(data);
+                setStats(getSyllabusStats());
+            } catch (err) {
+                console.error("Failed to load tree:", err);
+                setError("Failed to load syllabus content.");
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadTree();
+    }, [selectedSyllabusId]);
 
     const [selectedField, setSelectedField] = useState<string | null>(null);
     const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set());
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Search results
+    // ... (Search results & Toggles remain same) ...
     const searchResults = useMemo(() => {
         if (!searchQuery.trim()) return null;
         return searchSections(searchQuery);
@@ -55,14 +144,57 @@ const Curriculum: React.FC = () => {
 
     const activeField = tree.find(f => f.Id === selectedField);
 
+    if (loading && !tree.length && !syllabuses.length) {
+        return (
+            <div className="flex flex-col items-center justify-center h-96 space-y-4">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p className="text-muted-foreground">Φόρτωση...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center h-96 space-y-4 text-destructive">
+                <AlertTriangle className="w-8 h-8" />
+                <p className="font-semibold">{error}</p>
+            </div>
+        );
+    }
+
     return (
         <div className="p-8 max-w-[1600px] mx-auto space-y-8">
             {/* Header */}
-            <header>
-                <h1 className="text-3xl font-bold tracking-tight">Ύλη Μαθηματικών</h1>
-                <p className="text-muted-foreground mt-1">
-                    Πλήρης δομή: {stats.fields} πεδία · {stats.chapters} κεφάλαια · {stats.sections} ενότητες · {stats.exerciseTypes} τύποι ασκήσεων
-                </p>
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight mb-2">Ύλη Μαθηματικών</h1>
+
+                    {/* Syllabus Selector */}
+                    <div className="flex items-center gap-3">
+                        <select
+                            value={selectedSyllabusId || ''}
+                            onChange={(e) => setSelectedSyllabusId(e.target.value)}
+                            className="bg-transparent border border-border rounded-md px-3 py-1 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            disabled={loading || syllabuses.length === 0}
+                        >
+                            {syllabuses.length === 0 && <option>Δημιουργήστε Ύλη...</option>}
+                            {syllabuses.map(s => (
+                                <option key={s.id} value={s.id}>{s.name}</option>
+                            ))}
+                        </select>
+                        <span className="text-muted-foreground text-xs hidden sm:inline-block">
+                            · {stats.fields} πεδία · {stats.chapters} κεφάλαια
+                        </span>
+                    </div>
+                </div>
+
+                <button
+                    onClick={() => navigate('/curriculum/new')}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors whitespace-nowrap"
+                >
+                    <BookOpen className="w-4 h-4" />
+                    Νέα Ύλη
+                </button>
             </header>
 
             {/* Stats Row */}
@@ -132,6 +264,17 @@ const Curriculum: React.FC = () => {
             {/* Field Cards */}
             {!searchResults && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                    {/* Add Field Button */}
+                    <button
+                        onClick={() => setAddingNode({ type: 'FIELD', parentId: null })}
+                        className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border p-5 hover:border-primary/50 hover:bg-secondary/50 transition-all min-h-[140px]"
+                    >
+                        <div className="p-3 rounded-full bg-secondary text-primary">
+                            <Plus className="w-6 h-6" />
+                        </div>
+                        <span className="font-semibold text-sm text-muted-foreground">Προσθήκη Πεδίου</span>
+                    </button>
+
                     {tree.map(field => {
                         const colors = getFieldColor(field.Id);
                         const isSelected = selectedField === field.Id;
@@ -141,9 +284,9 @@ const Curriculum: React.FC = () => {
                                 key={field.Id}
                                 onClick={() => setSelectedField(isSelected ? null : field.Id)}
                                 className={cn(
-                                    "text-left rounded-xl border-2 p-5 transition-all duration-200 hover:shadow-md",
+                                    "text-left rounded-xl border-2 p-5 transition-all duration-200 hover:shadow-md group relative",
                                     isSelected
-                                        ? `${colors.border} ${colors.bg} shadow-md ring-2 ring-offset-2 ring-offset-background`
+                                        ? `${colors.border} ${colors.bg} shadow - md ring - 2 ring - offset - 2 ring - offset - background`
                                         : "border-border hover:border-primary/30"
                                 )}
                                 style={isSelected ? { '--tw-ring-color': `hsl(var(--primary) / 0.3)` } as React.CSSProperties : undefined}
@@ -155,6 +298,24 @@ const Curriculum: React.FC = () => {
                                     <p>{field.totalSections} ενότητες</p>
                                     <p>{field.totalExercises} τύποι ασκ.</p>
                                 </div>
+
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setEditingNode({ id: field.Id, title: field.Name, type: 'FIELD' }); }}
+                                        className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary"
+                                        title="Επεξεργασία"
+                                    >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleDelete(field.Id, 'πεδίο'); }}
+                                        className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                                        title="Διαγραφή"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+
                                 {isSelected && (
                                     <div className={cn("mt-3 h-1 rounded-full", colors.accent)} />
                                 )}
@@ -167,14 +328,23 @@ const Curriculum: React.FC = () => {
             {/* Chapters & Sections for selected field */}
             {activeField && !searchResults && (
                 <div className="space-y-3">
-                    <div className="flex items-center gap-3 mb-4">
-                        <span className="text-2xl">{getFieldColor(activeField.Id).icon}</span>
-                        <div>
-                            <h2 className="text-xl font-bold">{activeField.Name}</h2>
-                            <p className="text-xs text-muted-foreground">
-                                {activeField.totalChapters} κεφάλαια · {activeField.totalSections} ενότητες · {activeField.totalExercises} τύποι ασκήσεων
-                            </p>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">{getFieldColor(activeField.Id).icon}</span>
+                            <div>
+                                <h2 className="text-xl font-bold">{activeField.Name}</h2>
+                                <p className="text-xs text-muted-foreground">
+                                    {activeField.totalChapters} κεφάλαια · {activeField.totalSections} ενότητες · {activeField.totalExercises} τύποι ασκήσεων
+                                </p>
+                            </div>
                         </div>
+                        <button
+                            onClick={() => setAddingNode({ type: 'CHAPTER', parentId: activeField.Id })}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 rounded-md hover:bg-primary/20 transition-colors"
+                        >
+                            <Plus className="w-3.5 h-3.5" />
+                            Νέο Κεφάλαιο
+                        </button>
                     </div>
 
                     {activeField.chapters.map(chapter => (
@@ -183,11 +353,30 @@ const Curriculum: React.FC = () => {
                             chapter={chapter}
                             fieldId={activeField.Id}
                             isExpanded={expandedChapters.has(chapter.Id)}
-                            expandedSections={expandedSections}
                             onToggle={() => toggleChapter(chapter.Id)}
-                            onToggleSection={toggleSection}
+                            onAddSection={() => setAddingNode({ type: 'SECTION', parentId: chapter.Id })}
+                            onEdit={() => setEditingNode({ id: chapter.Id, title: chapter.Name, type: 'CHAPTER', prerequisites: chapter.prerequisites })}
+                            onDelete={() => handleDelete(chapter.Id, 'κεφάλαιο')}
+                            onEditSection={(id, title, prerequisites) => setEditingNode({ id, title, type: 'SECTION', prerequisites })}
+                            onDeleteSection={(id) => handleDelete(id, 'ενότητα')}
+                            onAddParagraph={(sectionId) => setAddingNode({ type: 'PARAGRAPH', parentId: sectionId })}
+                            onEditParagraph={(id, title, contentType) => setEditingNode({ id, title, contentType, type: 'PARAGRAPH' })}
+                            onDeleteParagraph={(id) => handleDelete(id, 'παράγραφο')}
+                            onManageParagraph={(paragraph) => setManagingParagraph(paragraph)}
                         />
                     ))}
+
+                    {activeField.chapters.length === 0 && (
+                        <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-lg">
+                            <p>Δεν υπάρχουν κεφάλαια ακόμα.</p>
+                            <button
+                                onClick={() => setAddingNode({ type: 'CHAPTER', parentId: activeField.Id })}
+                                className="text-primary hover:underline mt-1 text-sm"
+                            >
+                                Προσθέστε το πρώτο
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -200,6 +389,49 @@ const Curriculum: React.FC = () => {
                     </CardContent>
                 </Card>
             )}
+            {/* Exercise Types Manager (Global) */}
+            {selectedSyllabusId && (
+                <div className="mt-8 border-t pt-8">
+                    <ExerciseTypeManager />
+                </div>
+            )}
+
+            {/* Dialogs */}
+            {selectedSyllabusId && managingParagraph && (
+                <ParagraphContentManager
+                    isOpen={!!managingParagraph}
+                    onClose={() => setManagingParagraph(null)}
+                    paragraphId={managingParagraph.Id}
+                    paragraphTitle={managingParagraph.Name}
+                    paragraphType={managingParagraph.contentType}
+                    syllabusId={selectedSyllabusId}
+                    existingContent={managingParagraph.contentItems || []}
+                    onUpdate={refreshTree}
+                />
+            )}
+
+            {selectedSyllabusId && addingNode && (
+                <AddNodeDialog
+                    isOpen={!!addingNode}
+                    onClose={() => setAddingNode(null)}
+                    type={addingNode.type}
+                    parentId={addingNode.parentId}
+                    syllabusId={selectedSyllabusId}
+                    onSuccess={refreshTree}
+                />
+            )}
+            {editingNode && (
+                <EditNodeDialog
+                    isOpen={!!editingNode}
+                    onClose={() => setEditingNode(null)}
+                    nodeId={editingNode.id}
+                    currentTitle={editingNode.title}
+                    currentContentType={editingNode.contentType}
+                    currentPrerequisites={editingNode.prerequisites}
+                    type={editingNode.type}
+                    onSuccess={refreshTree}
+                />
+            )}
         </div>
     );
 };
@@ -210,44 +442,98 @@ interface ChapterAccordionProps {
     chapter: SyllabusChapterNode;
     fieldId: string;
     isExpanded: boolean;
-    expandedSections: Set<string>;
     onToggle: () => void;
-    onToggleSection: (id: string) => void;
+    onAddSection: () => void;
+    onEdit: () => void;
+    onDelete: () => void;
+    onEditSection: (id: string, title: string, prerequisites?: string) => void;
+    onDeleteSection: (id: string) => void;
+    onAddParagraph: (sectionId: string) => void;
+    onEditParagraph: (id: string, title: string, contentType?: 'THEORY' | 'METHODOLOGY') => void;
+    onDeleteParagraph: (id: string) => void;
+    onManageParagraph: (paragraph: SyllabusParagraphNode) => void;
 }
 
 const ChapterAccordion: React.FC<ChapterAccordionProps> = ({
-    chapter, fieldId, isExpanded, expandedSections, onToggle, onToggleSection,
+    chapter, fieldId, isExpanded, onToggle, onAddSection,
+    onEdit, onDelete, onEditSection, onDeleteSection,
+    onAddParagraph, onEditParagraph, onDeleteParagraph, onManageParagraph
 }) => {
     const colors = getFieldColor(fieldId);
 
     return (
         <Card className="overflow-hidden">
-            <button
-                onClick={onToggle}
-                className="w-full p-5 flex items-center justify-between hover:bg-secondary/30 transition-colors text-left"
-            >
-                <div className="flex items-center gap-4">
+            <div className="flex items-center justify-between p-2 pr-5 group">
+                <button
+                    onClick={onToggle}
+                    className="flex-1 p-3 flex items-center gap-4 hover:bg-secondary/30 transition-colors text-left rounded-md"
+                >
                     <div className={cn("p-2 rounded-lg", colors.bg, colors.text)}>
                         <BookOpen className="w-5 h-5" />
                     </div>
-                    <div>
-                        <h3 className="font-semibold text-sm">{chapter.Name}</h3>
+                    <div className="flex-1">
+                        <h3 className="font-semibold text-sm flex items-center gap-2">
+                            <span>{chapter.Name}</span>
+                            {chapter.prerequisites && (
+                                <span
+                                    className="group/prereq relative inline-flex"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    title="Προαπαιτούμενα"
+                                    aria-label="Προαπαιτούμενα"
+                                >
+                                    <Info className="w-3.5 h-3.5 text-muted-foreground/70 hover:text-muted-foreground transition-colors" />
+                                    <span className="pointer-events-none absolute left-1/2 top-full z-50 mt-2 hidden w-[360px] -translate-x-1/2 rounded-md border border-border bg-background p-2 shadow-lg group-hover/prereq:block">
+                                        <div className="text-[10px] font-semibold text-muted-foreground mb-1">
+                                            Προαπαιτούμενα
+                                        </div>
+                                        <div className="text-[11px] leading-relaxed text-foreground/90">
+                                            {chapter.prerequisites}
+                                        </div>
+                                    </span>
+                                </span>
+                            )}
+                        </h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
                             {chapter.sections.length} ενότητες · {chapter.totalExercises} τύποι ασκήσεων
                         </p>
                     </div>
-                </div>
+                </button>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity mr-2">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                            className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary transition-colors"
+                        >
+                            <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                            className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onAddSection(); }}
+                        className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary transition-colors"
+                        title="Προσθήκη Ενότητας"
+                    >
+                        <Plus className="w-4 h-4" />
+                    </button>
                     <Badge variant="outline" className="text-[10px] hidden sm:inline-flex">
                         {chapter.sections.length}
                     </Badge>
-                    {isExpanded
-                        ? <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                        : <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    }
+                    <button onClick={onToggle}>
+                        {isExpanded
+                            ? <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                            : <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        }
+                    </button>
                 </div>
-            </button>
+            </div>
 
             {isExpanded && (
                 <div className="border-t border-border">
@@ -256,8 +542,12 @@ const ChapterAccordion: React.FC<ChapterAccordionProps> = ({
                             key={section.Id}
                             section={section}
                             fieldId={fieldId}
-                            isExpanded={expandedSections.has(section.Id)}
-                            onToggle={() => onToggleSection(section.Id)}
+                            onEdit={() => onEditSection(section.Id, section.Name, section.prerequisites)}
+                            onDelete={() => onDeleteSection(section.Id)}
+                            onAddParagraph={() => onAddParagraph(section.Id)}
+                            onEditParagraph={onEditParagraph}
+                            onDeleteParagraph={onDeleteParagraph}
+                            onManageParagraph={onManageParagraph}
                         />
                     ))}
                 </div>
@@ -271,48 +561,211 @@ const ChapterAccordion: React.FC<ChapterAccordionProps> = ({
 interface SectionRowProps {
     section: SyllabusSectionNode;
     fieldId: string;
-    isExpanded: boolean;
-    onToggle: () => void;
+    onEdit: () => void;
+    onDelete: () => void;
+    onAddParagraph: () => void;
+    onEditParagraph: (id: string, title: string, contentType?: 'THEORY' | 'METHODOLOGY') => void;
+    onDeleteParagraph: (id: string) => void;
+    onManageParagraph: (paragraph: SyllabusParagraphNode) => void;
 }
 
-const SectionRow: React.FC<SectionRowProps> = ({ section, fieldId, isExpanded, onToggle }) => {
+const SectionRow: React.FC<SectionRowProps> = ({
+    section, fieldId, onEdit, onDelete,
+    onAddParagraph, onEditParagraph, onDeleteParagraph, onManageParagraph
+}) => {
+    const [isExpanded, setIsExpanded] = useState(false);
     const colors = getFieldColor(fieldId);
 
+    // Calculate total exercises from paragraphs + direct types (legacy)
+    const totalExercises = (section.paragraphs?.reduce((acc, p) => acc + p.exerciseCount, 0) || 0) + (section.exerciseTypes?.length || 0);
+
     return (
-        <div className="border-b border-border last:border-0">
-            <button
-                onClick={onToggle}
-                className="w-full px-5 py-3.5 flex items-center gap-3 hover:bg-secondary/20 transition-colors text-left"
+        <div className="border-b border-border last:border-0 group">
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setIsExpanded(!isExpanded)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        setIsExpanded(!isExpanded);
+                    }
+                }}
+                className="w-full px-5 py-3.5 flex items-center gap-3 hover:bg-secondary/20 transition-colors text-left cursor-pointer"
             >
                 <div className={cn("w-2 h-2 rounded-full shrink-0", colors.accent)} />
-                <span className="text-sm flex-1">{section.Name}</span>
+                <div className="flex-1 min-w-0">
+                    <span className="text-sm flex items-center gap-2">
+                        <span className="block">{section.Name}</span>
+                        {section.prerequisites && (
+                            <span
+                                className="group/prereq relative inline-flex"
+                                onClick={(e) => e.stopPropagation()}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                title="Προαπαιτούμενα"
+                                aria-label="Προαπαιτούμενα"
+                            >
+                                <Info className="w-3 h-3 text-muted-foreground/70 hover:text-muted-foreground transition-colors" />
+                                <span className="pointer-events-none absolute left-0 top-full z-50 mt-2 hidden w-[360px] rounded-md border border-border bg-background p-2 shadow-lg group-hover/prereq:block">
+                                    <div className="text-[10px] font-semibold text-muted-foreground mb-1">
+                                        Προαπαιτούμενα
+                                    </div>
+                                    <div className="text-[11px] leading-relaxed text-foreground/90">
+                                        {section.prerequisites}
+                                    </div>
+                                </span>
+                            </span>
+                        )}
+                    </span>
+                </div>
+
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity mr-2">
+                    <div
+                        onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                        className="p-1.5 rounded-md hover:bg-background text-muted-foreground hover:text-primary cursor-pointer"
+                        title="Επεξεργασία"
+                    >
+                        <Pencil className="w-3 h-3" />
+                    </div>
+                    <div
+                        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                        className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive cursor-pointer"
+                        title="Διαγραφή"
+                    >
+                        <Trash2 className="w-3 h-3" />
+                    </div>
+                </div>
+
+                <div
+                    onClick={(e) => { e.stopPropagation(); onAddParagraph(); }}
+                    className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-primary transition-colors cursor-pointer mr-2 opacity-0 group-hover:opacity-100"
+                    title="Προσθήκη Παραγράφου"
+                >
+                    <Plus className="w-3.5 h-3.5" />
+                </div>
+
                 <Badge variant="outline" className="text-[9px] shrink-0">
-                    {section.exerciseCount} τύποι
+                    {totalExercises} τύποι
                 </Badge>
-                {section.exerciseCount > 0 && (
+                {totalExercises > 0 && (
                     isExpanded
                         ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
                         : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
                 )}
-            </button>
+            </div>
 
-            {isExpanded && section.exerciseTypes.length > 0 && (
-                <div className="px-8 pb-4">
-                    <div className="flex flex-wrap gap-1.5">
-                        {section.exerciseTypes.map(et => (
+            {isExpanded && (
+                <div className="px-8 pb-4 space-y-2">
+                    {/* Paragraphs */}
+                    {section.paragraphs?.map(paragraph => (
+                        <ParagraphRow
+                            key={paragraph.Id}
+                            paragraph={paragraph}
+                            fieldId={fieldId}
+                            onEdit={() => onEditParagraph(paragraph.Id, paragraph.Name, paragraph.contentType)}
+                            onDelete={() => onDeleteParagraph(paragraph.Id)}
+                            onManageContent={() => onManageParagraph(paragraph)}
+                        />
+                    ))}
+
+                    {/* Legacy Exercise Types (Direct Children) */}
+                    {section.exerciseTypes?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                            {section.exerciseTypes.map(et => (
+                                <span
+                                    key={et.Id}
+                                    className={cn(
+                                        "inline-flex items-center px-2.5 py-1 rounded-md text-[11px]",
+                                        colors.bg, colors.text
+                                    )}
+                                >
+                                    {et.Name}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+interface ParagraphRowProps {
+    paragraph: import('../types').SyllabusParagraphNode;
+    fieldId: string;
+    onEdit: () => void;
+    onDelete: () => void;
+    onManageContent: () => void;
+}
+
+const ParagraphRow: React.FC<ParagraphRowProps> = ({ paragraph, fieldId, onEdit, onDelete, onManageContent }) => {
+    const colors = getFieldColor(fieldId);
+    const isMethodology = paragraph.contentType === 'METHODOLOGY';
+
+    return (
+        <div className="group/paragraph flex items-start gap-3 p-2 rounded-md hover:bg-secondary/30 transition-colors">
+            <div className={cn(
+                "mt-1.5 w-1.5 h-1.5 rounded-full shrink-0",
+                isMethodology ? "bg-amber-500" : "bg-blue-500" // Different colors for types
+            )} />
+            <div className="flex-1">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium opacity-90">{paragraph.Name}</span>
+                        {/* Type Badge */}
+                        <span className={cn(
+                            "text-[10px] px-1.5 py-0.5 rounded border uppercase tracking-wider",
+                            isMethodology
+                                ? "border-amber-200 text-amber-700 bg-amber-50"
+                                : "border-blue-200 text-blue-700 bg-blue-50"
+                        )}>
+                            {isMethodology ? 'ΜΕΘΟΔΟΛΟΓΙΑ' : 'ΘΕΩΡΙΑ'}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover/paragraph:opacity-100 transition-opacity">
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onManageContent(); }}
+                            className="p-1 px-2 h-6 text-xs bg-primary/10 text-primary hover:bg-primary/20 rounded mr-1 flex items-center gap-1"
+                            title="Διαχείριση Περιεχομένου"
+                        >
+                            <List className="w-3 h-3" /> Περιεχόμενο
+                        </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                            className="p-1 rounded hover:bg-background text-muted-foreground hover:text-primary transition-colors"
+                            title="Επεξεργασία"
+                        >
+                            <Pencil className="w-3 h-3" />
+                        </button>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                            title="Διαγραφή"
+                        >
+                            <Trash2 className="w-3 h-3" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Paragraph is now a leaf node. Specific methods will be managed in a detail view later. */}
+                {paragraph.exerciseTypes.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2 opacity-60">
+                        {/* Displaying existing specific methods if any */}
+                        {paragraph.exerciseTypes.map(et => (
                             <span
                                 key={et.Id}
                                 className={cn(
-                                    "inline-flex items-center px-2.5 py-1 rounded-md text-[11px]",
-                                    colors.bg, colors.text
+                                    "inline-flex items-center px-2 py-0.5 rounded text-[10px] border border-border",
+                                    // Make them subtle as they are inside content
+                                    "bg-background text-muted-foreground"
                                 )}
                             >
                                 {et.Name}
                             </span>
                         ))}
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 };

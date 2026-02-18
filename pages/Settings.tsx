@@ -68,7 +68,7 @@ const Settings: React.FC = () => {
                         <div className="relative">
                             <Input
                                 type={showGeminiKey ? 'text' : 'password'}
-                                placeholder="AIzaSyBdHnXBBiJG2Mv1J6uN8ycp7_bcVikG1pU"
+                                placeholder="..."
                                 value={settings.geminiApiKey}
                                 onChange={(e) => updateSetting('geminiApiKey', e.target.value)}
                             />

@@ -1,144 +1,309 @@
-import type {
+import {
     SyllabusField,
     SyllabusChapter,
     SyllabusSection,
     SyllabusExerciseType,
-    SectionExerciseMapping,
     SyllabusFieldNode,
     SyllabusChapterNode,
     SyllabusSectionNode,
+    SyllabusParagraphNode
 } from '../types';
 
-// ─── Raw JSON Imports ───────────────────────────────────────────────
+const API_URL = 'http://localhost:3001/api';
 
-import fieldsData from '../database/Fields.json';
-import chaptersData from '../database/Chapters.json';
-import sectionsData from '../database/Sections.json';
-import exerciseTypesData from '../database/Exercise_Types.json';
-import sectionExercisesData from '../database/Sections_Exercises.json';
+// ─── Types matching DB Schema ───────────────────────────────────────
 
-// ─── Typed Data ─────────────────────────────────────────────────────
+export interface Syllabus {
+    id: string;
+    name: string;
+    description: string | null;
+    type: 'PERSONAL' | 'ORGANIZATION';
+    createdAt: string;
+    updatedAt: string;
+    ownerId: string | null;
+    orgId: string | null;
+}
 
-const fields: SyllabusField[] = fieldsData as SyllabusField[];
-const chapters: SyllabusChapter[] = chaptersData as SyllabusChapter[];
-const sections: SyllabusSection[] = sectionsData as SyllabusSection[];
-const exerciseTypes: SyllabusExerciseType[] = exerciseTypesData as SyllabusExerciseType[];
-const sectionExercises: SectionExerciseMapping[] = sectionExercisesData as SectionExerciseMapping[];
+interface DbSyllabusNode {
+    id: string;
+    parentId: string | null;
+    title: string;
+    nodeType: 'FIELD' | 'CHAPTER' | 'SECTION' | 'EXERCISE_TYPE' | 'PARAGRAPH' | 'CONTENT_ITEM';
+    orderIndex: number;
+    metadata: any;
+    prerequisites?: string | null;
+    contentType?: string | null;
+    children?: DbSyllabusNode[];
+}
 
-// ─── Lookup Maps (computed once) ────────────────────────────────────
+// ─── API Helpers ────────────────────────────────────────────────────
 
-const exerciseTypeMap = new Map<string, SyllabusExerciseType>(
-    exerciseTypes.map(et => [et.Id, et])
-);
-
-// Section ID → Exercise Type IDs
-const sectionToExerciseIds = new Map<string, Set<string>>();
-for (const mapping of sectionExercises) {
-    if (!sectionToExerciseIds.has(mapping.Section_Id)) {
-        sectionToExerciseIds.set(mapping.Section_Id, new Set());
+async function fetchFromApi<T>(endpoint: string): Promise<T> {
+    const response = await fetch(`${API_URL}${endpoint}`);
+    if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText}`);
     }
-    sectionToExerciseIds.get(mapping.Section_Id)!.add(mapping.Exercise_Id);
+    return response.json();
 }
 
-// ─── Tree Builder ───────────────────────────────────────────────────
-
-function buildSectionNode(section: SyllabusSection): SyllabusSectionNode {
-    const exerciseIds = sectionToExerciseIds.get(section.Id) ?? new Set<string>();
-    const types: SyllabusExerciseType[] = [];
-    for (const id of exerciseIds) {
-        const et = exerciseTypeMap.get(id);
-        if (et) types.push(et);
+async function postToApi<T>(endpoint: string, body: any): Promise<T> {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+        throw new Error(`API Error: ${response.statusText}`);
     }
-    return {
-        ...section,
-        exerciseTypes: types.sort((a, b) => a.Name.localeCompare(b.Name, 'el')),
-        exerciseCount: types.length,
-    };
-}
-
-function buildChapterNode(chapter: SyllabusChapter): SyllabusChapterNode {
-    const chapterSections = sections
-        .filter(s => s.Chapter === chapter.Id)
-        .map(buildSectionNode)
-        .sort((a, b) => a.Name.localeCompare(b.Name, 'el'));
-
-    return {
-        ...chapter,
-        sections: chapterSections,
-        totalExercises: chapterSections.reduce((sum, s) => sum + s.exerciseCount, 0),
-    };
-}
-
-function buildFieldNode(field: SyllabusField): SyllabusFieldNode {
-    const fieldChapters = chapters
-        .filter(c => c.Field === field.Id)
-        .map(buildChapterNode)
-        .sort((a, b) => a.Name.localeCompare(b.Name, 'el'));
-
-    const totalSections = fieldChapters.reduce((sum, c) => sum + c.sections.length, 0);
-    const totalExercises = fieldChapters.reduce((sum, c) => sum + c.totalExercises, 0);
-
-    return {
-        ...field,
-        chapters: fieldChapters,
-        totalChapters: fieldChapters.length,
-        totalSections,
-        totalExercises,
-    };
+    return response.json();
 }
 
 // ─── Public API ─────────────────────────────────────────────────────
 
-let _syllabusTree: SyllabusFieldNode[] | null = null;
+// Cache for performance (optional, could be removed for real-time updates)
+let _syllabusCache: SyllabusFieldNode[] | null = null;
+let _currentSyllabusId: string | null = null; // Track which syllabus we are viewing
 
-/** Full syllabus tree: Field[] → Chapter[] → Section[] → ExerciseType[] */
-export function getSyllabusTree(): SyllabusFieldNode[] {
-    if (!_syllabusTree) {
-        _syllabusTree = fields.map(buildFieldNode);
-    }
-    return _syllabusTree;
-}
+/**
+ * Fetch the entire syllabus tree for a given Syllabus ID.
+ * Transforms the flat or nested DB nodes into the UI's expected Tree structure.
+ */
+export async function fetchSyllabusTree(syllabusId: string): Promise<SyllabusFieldNode[]> {
+    _currentSyllabusId = syllabusId;
 
-/** All fields */
-export function getFields(): SyllabusField[] {
-    return fields;
-}
+    // fetch all nodes for this syllabus
+    // We might need a recursive endpoint or fetch all flat and build tree
+    // For now, let's assume we fetch all nodes flat and rebuild tree client-side
+    // OR update server to return tree.
+    // Let's implement a 'get all nodes' endpoint.
 
-/** Chapters belonging to a specific field */
-export function getChaptersByField(fieldId: string): SyllabusChapterNode[] {
-    const tree = getSyllabusTree();
-    return tree.find(f => f.Id === fieldId)?.chapters ?? [];
-}
+    // For MVP: Fetch just the root fields first, then we might lazy load?
+    // Actually, UI expects full tree for search/stats.
+    const nodes = await fetchFromApi<DbSyllabusNode[]>(`/syllabus-node?syllabusId=${syllabusId}`);
 
-/** Sections belonging to a specific chapter */
-export function getSectionsByChapter(chapterId: string): SyllabusSectionNode[] {
-    const tree = getSyllabusTree();
-    for (const field of tree) {
-        const chapter = field.chapters.find(c => c.Id === chapterId);
-        if (chapter) return chapter.sections;
-    }
-    return [];
-}
+    // Build Tree
+    const nodeMap = new Map<string, DbSyllabusNode & { children: DbSyllabusNode[] }>();
+    nodes.forEach(n => nodeMap.set(n.id, { ...n, children: [] }));
 
-/** Exercise types for a specific section */
-export function getExercisesBySection(sectionId: string): SyllabusExerciseType[] {
-    const tree = getSyllabusTree();
-    for (const field of tree) {
-        for (const chapter of field.chapters) {
-            const section = chapter.sections.find(s => s.Id === sectionId);
-            if (section) return section.exerciseTypes;
+    const rootNodes: (DbSyllabusNode & { children: DbSyllabusNode[] })[] = [];
+
+    nodes.forEach(node => {
+        if (node.parentId && nodeMap.has(node.parentId)) {
+            nodeMap.get(node.parentId)!.children.push(nodeMap.get(node.id)!);
+        } else if (!node.parentId && node.nodeType === 'FIELD') {
+            rootNodes.push(nodeMap.get(node.id)!);
         }
-    }
-    return [];
+    });
+
+    // Sort by orderIndex
+    const sortNodes = (nodes: any[]) => nodes.sort((a, b) => a.orderIndex - b.orderIndex);
+
+    // Transform to UI types
+    const tree: SyllabusFieldNode[] = sortNodes(rootNodes).map(fieldNode => {
+        sortNodes(fieldNode.children);
+
+        const chapters = fieldNode.children
+            .filter(c => c.nodeType === 'CHAPTER')
+            .map(chapterNode => {
+                sortNodes(chapterNode.children || []);
+
+                const sections = chapterNode.children
+                    .filter(s => s.nodeType === 'SECTION')
+                    .map(sectionNode => {
+                        sortNodes(sectionNode.children || []);
+
+                        // Paragraphs
+                        const paragraphs = sectionNode.children
+                            .filter(p => p.nodeType === 'PARAGRAPH')
+                            .map(paragraphNode => {
+                                sortNodes(paragraphNode.children || []);
+
+                                const contentItems = paragraphNode.children
+                                    .filter(c => c.nodeType === 'CONTENT_ITEM')
+                                    .map(ci => ({
+                                        id: ci.id,
+                                        title: ci.title,
+                                        name: ci.title
+                                    }));
+
+                                const exerciseTypes = paragraphNode.children
+                                    .filter(e => e.nodeType === 'EXERCISE_TYPE')
+                                    .map(et => ({
+                                        Id: et.id,
+                                        Name: et.title
+                                    }));
+
+                                return {
+                                    Id: paragraphNode.id,
+                                    Name: paragraphNode.title,
+                                    Section: sectionNode.id,
+                                    contentType: paragraphNode.contentType as any,
+                                    exerciseTypes,
+                                    contentItems,
+                                    exerciseCount: exerciseTypes.length + contentItems.length
+                                } as SyllabusParagraphNode;
+                            });
+
+                        // Direct children exercise types (if any - fallback)
+                        const directExerciseTypes = sectionNode.children
+                            .filter(e => e.nodeType === 'EXERCISE_TYPE')
+                            .map(et => ({
+                                Id: et.id,
+                                Name: et.title
+                            } as SyllabusExerciseType));
+
+                        return {
+                            Id: sectionNode.id,
+                            Name: sectionNode.title,
+                            Chapter: chapterNode.id,
+                            prerequisites: sectionNode.prerequisites || undefined,
+                            paragraphs,
+                            exerciseTypes: directExerciseTypes,
+                            exerciseCount: paragraphs.reduce((s, p) => s + p.exerciseCount, 0) + directExerciseTypes.length
+                        } as SyllabusSectionNode;
+                    });
+
+                return {
+                    Id: chapterNode.id,
+                    Name: chapterNode.title,
+                    Field: fieldNode.id,
+                    prerequisites: chapterNode.prerequisites || undefined,
+                    sections,
+                    totalExercises: sections.reduce((s, sec) => s + sec.exerciseCount, 0)
+                } as SyllabusChapterNode;
+            });
+
+        return {
+            Id: fieldNode.id,
+            Name: fieldNode.title,
+            Description: fieldNode.metadata?.description || null,
+            chapters,
+            totalChapters: chapters.length,
+            totalSections: chapters.reduce((s, c) => s + c.sections.length, 0),
+            totalExercises: chapters.reduce((s, c) => s + c.totalExercises, 0)
+        } as SyllabusFieldNode;
+    });
+
+    _syllabusCache = tree;
+    return tree;
 }
 
-/** Search sections by name (Greek-aware) */
+export function getSyllabusTreeSync(): SyllabusFieldNode[] {
+    return _syllabusCache || []; // Fallback if not loaded
+}
+
+// ─── CRUD Operations ────────────────────────────────────────────────
+
+export async function fetchAllSyllabuses() {
+    return fetchFromApi<any[]>('/syllabus');
+}
+
+export async function createSyllabus(name: string, type: 'PERSONAL' | 'ORGANIZATION', ownerId: string, gradeLevel?: string) {
+    return postToApi('/syllabus', { name, type, ownerId, gradeLevel });
+}
+
+export async function importSyllabus(name: string, type: 'PERSONAL' | 'ORGANIZATION', tree: any[], ownerId: string) {
+    return postToApi('/syllabus/import', { name, type, tree, ownerId });
+}
+
+export async function updateSyllabus(id: string, name: string, type?: 'PERSONAL' | 'ORGANIZATION', description?: string, gradeLevel?: string) {
+    return fetch(`${API_URL}/syllabus/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type, description, gradeLevel })
+    }).then(res => {
+        if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
+        return res.json();
+    });
+}
+
+export async function deleteSyllabus(id: string) {
+    const response = await fetch(`${API_URL}/syllabus/${id}`, {
+        method: 'DELETE'
+    });
+    if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+    return response.json();
+}
+
+export async function createNode(
+    syllabusId: string,
+    parentId: string | null,
+    title: string,
+    type: 'FIELD' | 'CHAPTER' | 'SECTION' | 'PARAGRAPH' | 'EXERCISE_TYPE' | 'CONTENT_ITEM',
+    contentType?: 'THEORY' | 'METHODOLOGY',
+    prerequisites?: string
+) {
+    return postToApi('/syllabus-node', {
+        syllabusId,
+        parentId,
+        title,
+        type,
+        contentType,
+        prerequisites
+    });
+}
+
+export async function updateNode(nodeId: string, title: string, contentType?: 'THEORY' | 'METHODOLOGY', prerequisites?: string) {
+    return fetch(`${API_URL}/syllabus-node/${nodeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, contentType, prerequisites })
+    }).then(res => {
+        if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
+        return res.json();
+    });
+}
+
+export async function fetchNodePrerequisites(nodeIds: string[]) {
+    return postToApi('/syllabus/prerequisites', { nodeIds });
+}
+
+export async function deleteNode(nodeId: string) {
+    const response = await fetch(`${API_URL}/syllabus-node/${nodeId}`, {
+        method: 'DELETE'
+    });
+    if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+    return response.json();
+}
+
+// ─── Exercise Types ─────────────────────────────────────────────────
+
+export interface ExerciseType {
+    id: string;
+    name: string;
+    description?: string;
+    isSystem: boolean;
+}
+
+export async function getExerciseTypes() {
+    return fetchFromApi<ExerciseType[]>('/exercise-type');
+}
+
+export async function createExerciseType(name: string) {
+    return postToApi<ExerciseType>('/exercise-type', { name });
+}
+
+export async function deleteExerciseType(id: string) {
+    const response = await fetch(`${API_URL}/exercise-type/${id}`, {
+        method: 'DELETE'
+    });
+    if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+    return response.json();
+}
+
+
+// ─── Legacy/Compatibility Shims (for existing UI) ───────────────────
+
+export function getFields(): SyllabusField[] {
+    return _syllabusCache?.map(f => ({ Id: f.Id, Name: f.Name, Description: f.Description })) || [];
+}
+
 export function searchSections(query: string): SyllabusSectionNode[] {
-    if (!query.trim()) return [];
+    if (!_syllabusCache || !query.trim()) return [];
     const lowerQuery = query.toLowerCase();
-    const tree = getSyllabusTree();
     const results: SyllabusSectionNode[] = [];
-    for (const field of tree) {
+
+    for (const field of _syllabusCache) {
         for (const chapter of field.chapters) {
             for (const section of chapter.sections) {
                 if (section.Name.toLowerCase().includes(lowerQuery)) {
@@ -150,13 +315,13 @@ export function searchSections(query: string): SyllabusSectionNode[] {
     return results;
 }
 
-/** Get summary stats */
 export function getSyllabusStats() {
-    const tree = getSyllabusTree();
+    if (!_syllabusCache) return { fields: 0, chapters: 0, sections: 0, exerciseTypes: 0 };
     return {
-        fields: tree.length,
-        chapters: tree.reduce((s, f) => s + f.totalChapters, 0),
-        sections: tree.reduce((s, f) => s + f.totalSections, 0),
-        exerciseTypes: exerciseTypes.length,
+        fields: _syllabusCache.length,
+        chapters: _syllabusCache.reduce((s, f) => s + f.totalChapters, 0),
+        sections: _syllabusCache.reduce((s, f) => s + f.totalSections, 0),
+        exerciseTypes: _syllabusCache.reduce((s, f) => s + f.totalExercises, 0),
     };
 }
+

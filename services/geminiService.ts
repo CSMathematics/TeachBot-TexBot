@@ -158,3 +158,45 @@ async function generateExamViaGemini(params: GenerationParams): Promise<Exam> {
     throw error;
   }
 }
+
+/** Suggest prerequisites for a syllabus node using Gemini */
+export const getPrerequisiteSuggestion = async (title: string, type: string, context?: string): Promise<string> => {
+  const ai = getAi();
+  
+  // Get model from settings or use a valid default
+  let modelId = 'gemini-1.5-flash-latest';
+  try {
+    const saved = localStorage.getItem('edutex-settings');
+    if (saved) {
+      const s = JSON.parse(saved);
+      if (s.geminiModel) modelId = s.geminiModel;
+    }
+  } catch { }
+  
+  const prompt = `
+    Ως ειδικός παιδαγωγός μαθηματικών/φυσικής, πρότεινε προαπαιτούμενες γνώσεις για την ενότητα: "${title}" (${type}).
+    ${context ? `Πλαίσιο: ${context}` : ''}
+    
+    Απάντησε ΜΟΝΟ με μια λίστα εννοιών χωρισμένων με κόμμα. Όχι επεξηγήσεις.
+    Παράδειγμα: "Βασικά όρια, Συνέχεια συνάρτησης, Τριγωνομετρικοί αριθμοί"
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: modelId,
+      contents: prompt,
+    });
+    const text = response.text?.trim() || "";
+    if (!text) {
+      throw new Error("Empty response from Gemini");
+    }
+    return text;
+  } catch (error) {
+    console.error("Gemini suggestion failed:", error);
+    // Propagate a clean error so the UI μπορεί να δείξει το πραγματικό μήνυμα
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(String(error));
+  }
+};

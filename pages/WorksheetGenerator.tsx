@@ -7,7 +7,9 @@ import PdfPreview from '../components/PdfPreview';
 import DifficultySlider from '../components/DifficultySlider';
 import TimeCalibration from '../components/TimeCalibration';
 import TopicSelector from '../components/TopicSelector';
-import { Agent, AgentStatus, AgentDomain, Exam } from '../types';
+import { Agent, AgentStatus, AgentDomain, Exam, Question, SectionExerciseCount } from '../types';
+import PrerequisiteChecker from '../components/PrerequisiteChecker';
+import SectionExerciseList, { resolveSyllabusNodes, syncSectionExerciseCounts } from '../components/SectionExerciseList';
 import { apiGenerateExercises } from '../services/agentApiService';
 import { useSettings } from '../contexts/SettingsContext';
 import { cn } from '../lib/utils';
@@ -33,6 +35,7 @@ const WorksheetGenerator: React.FC = () => {
     const [topic, setTopic] = useState('Άλγεβρα: Εξισώσεις & Ανισώσεις - Εξισώσεις 2ου βαθμού');
     const [manualTopic, setManualTopic] = useState('');
     const [useManualTopic, setUseManualTopic] = useState(false);
+    const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
 
     const [grade, setGrade] = useState(settings.defaultGradeLevel);
     const [difficulty, setDifficulty] = useState(50);
@@ -40,6 +43,10 @@ const WorksheetGenerator: React.FC = () => {
     const [duration, setDuration] = useState(45);
     const [includeHints, setIncludeHints] = useState(false);
     const [includePitfalls, setIncludePitfalls] = useState(false);
+
+    // Per-section exercise count
+    const [exerciseCountMode, setExerciseCountMode] = useState<'global' | 'per-section'>('global');
+    const [sectionExerciseCounts, setSectionExerciseCounts] = useState<SectionExerciseCount[]>([]);
 
     // Agents - dynamic pipeline
     const getActiveAgents = (): Agent[] => {
@@ -83,22 +90,54 @@ const WorksheetGenerator: React.FC = () => {
                 setAgents(prev => prev.map(a => a.id === agent.id ? { ...a, status: AgentStatus.WORKING } : a));
 
                 if (agent.id === 'exercise-generator') {
-                    let exercises: any[];
-                    try {
-                        const diffLabel = difficulty < 25 ? 'easy' : difficulty < 50 ? 'medium' : difficulty < 75 ? 'hard' : 'advanced';
-                        const apiResult = await apiGenerateExercises({
-                            topic: currentTopic,
-                            difficulty: diffLabel,
-                            count: exerciseCount,
-                            mode,
-                            mistakes: mode === 'remedial' ? mistakes.split('\n').filter(Boolean) : undefined
-                        });
-                        exercises = apiResult.exercises;
-                    } catch (error) {
-                        console.error("API Error in WorksheetGenerator:", error);
-                        throw error;
+                    const diffLabel = difficulty < 25 ? 'easy' : difficulty < 50 ? 'medium' : difficulty < 75 ? 'hard' : 'advanced';
+
+                    if (exerciseCountMode === 'per-section' && sectionExerciseCounts.length > 0) {
+                        // Per-section mode: one call per section, then merge
+                        console.log('[WorksheetGenerator] Per-section mode, generating for', sectionExerciseCounts.length, 'sections');
+                        let allExercises: any[] = [];
+
+                        for (const sec of sectionExerciseCounts) {
+                            const sectionTopic = sec.parentName ? `${sec.parentName}: ${sec.nodeName}` : sec.nodeName;
+                            console.log(`[WorksheetGenerator] Generating ${sec.count} exercises for: ${sectionTopic}`);
+
+                            const apiResult = await apiGenerateExercises({
+                                topic: sectionTopic,
+                                difficulty: diffLabel,
+                                count: sec.count,
+                                mode,
+                                mistakes: mode === 'remedial' ? mistakes.split('\n').filter(Boolean) : undefined
+                            });
+
+                            if (apiResult.exercises?.length > 0) {
+                                allExercises = [...allExercises, ...apiResult.exercises];
+                            }
+                        }
+
+                        if (allExercises.length === 0) {
+                            alert('Δεν δημιουργήθηκαν ασκήσεις.');
+                            throw new Error('No exercises generated');
+                        }
+
+                        setResult({ exercises: allExercises, count: allExercises.length });
+                    } else {
+                        // Global mode: single call (existing behavior)
+                        let exercises: any[];
+                        try {
+                            const apiResult = await apiGenerateExercises({
+                                topic: currentTopic,
+                                difficulty: diffLabel,
+                                count: exerciseCount,
+                                mode,
+                                mistakes: mode === 'remedial' ? mistakes.split('\n').filter(Boolean) : undefined
+                            });
+                            exercises = apiResult.exercises;
+                        } catch (error) {
+                            console.error("API Error in WorksheetGenerator:", error);
+                            throw error;
+                        }
+                        setResult({ exercises, count: exercises.length });
                     }
-                    setResult({ exercises, count: exercises.length });
                 } else {
                     await wait(300 + Math.random() * 200);
                 }
@@ -124,10 +163,15 @@ const WorksheetGenerator: React.FC = () => {
         createdAt: new Date().toISOString(),
         questions: result.exercises.map((ex, i) => ({
             id: `q${i + 1}`,
+            syllabusId: 'mock',
+            parentId: null,
+            nodeType: 'PARAGRAPH',
+            orderIndex: i,
+            type: 'exercise',
             content: ex.latex || `Άσκηση ${i + 1}`,
-            difficulty: ex.metadata?.difficulty || 'medium',
+            difficulty: ex.metadata?.difficulty || 'Medium',
             points: 10,
-            solution: `Λύση άσκησης ${i + 1}: x = ...`,
+            solution: ex.solution || `Λύση άσκησης ${i + 1}: x = ...`,
             tags: ex.metadata?.tags || [],
         })),
     } : null;
@@ -225,38 +269,63 @@ const WorksheetGenerator: React.FC = () => {
                                 <TopicSelector
                                     value={topic}
                                     onChange={setTopic}
+                                    onGradeLevelChange={(gl) => setGrade(gl)}
+                                    onSelectedIdsChange={(ids) => {
+                                        setSelectedNodeIds(ids);
+                                        // Sync section counts immediately to avoid effects
+                                        const resolved = resolveSyllabusNodes(ids);
+                                        setSectionExerciseCounts(prev => syncSectionExerciseCounts(prev, resolved));
+                                    }}
                                 />
                             )}
+
+                            {/* Prerequisite Checker */}
+                            {!useManualTopic && (
+                                <div className="flex justify-end pt-1">
+                                    <PrerequisiteChecker selectedNodeIds={selectedNodeIds} />
+                                </div>
+                            )}
+
                             {(useManualTopic ? manualTopic : topic) && (
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2" title={useManualTopic ? manualTopic : topic}>
                                     Επιλεγμένο: {useManualTopic ? manualTopic : topic}
                                 </p>
                             )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="space-y-2">
+                        {/* Grade Level (auto-filled from syllabus, overridable) */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
                                 <Label>Βαθμίδα</Label>
-                                <Select value={grade} onChange={(e) => setGrade(e.target.value)}>
-                                    <option>Α' Λυκείου</option>
-                                    <option>Β' Λυκείου</option>
-                                    <option>Γ' Λυκείου</option>
-                                </Select>
+                                {!useManualTopic && (
+                                    <span className="text-[10px] text-muted-foreground bg-secondary/50 px-1.5 py-0.5 rounded">
+                                        auto-fill από ύλη
+                                    </span>
+                                )}
                             </div>
-                            <div className="space-y-2">
-                                <Label>Χρόνος</Label>
-                                <div className="flex items-center gap-2">
-                                    <Input
-                                        type="number"
-                                        min={15}
-                                        max={120}
-                                        step={5}
-                                        value={duration}
-                                        onChange={(e) => setDuration(Number(e.target.value))}
-                                        className="w-full"
-                                    />
-                                    <span className="text-xs text-muted-foreground whitespace-nowrap">λεπτά</span>
-                                </div>
+                            <Select value={grade} onChange={(e) => setGrade(e.target.value)}>
+                                <option>Α' Γυμνασίου</option>
+                                <option>Β' Γυμνασίου</option>
+                                <option>Γ' Γυμνασίου</option>
+                                <option>Α' Λυκείου</option>
+                                <option>Β' Λυκείου</option>
+                                <option>Γ' Λυκείου</option>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Χρόνος</Label>
+                            <div className="flex items-center gap-2">
+                                <Input
+                                    type="number"
+                                    min={15}
+                                    max={120}
+                                    step={5}
+                                    value={duration}
+                                    onChange={(e) => setDuration(Number(e.target.value))}
+                                    className="w-full"
+                                />
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">λεπτά</span>
                             </div>
                         </div>
 
@@ -267,14 +336,59 @@ const WorksheetGenerator: React.FC = () => {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Ασκήσεις ({exerciseCount})</Label>
-                            <Input
-                                type="number"
-                                min={1}
-                                max={20}
-                                value={exerciseCount}
-                                onChange={(e) => setExerciseCount(Number(e.target.value))}
-                            />
+                            {/* Exercise Count Mode Toggle */}
+                            <div className="flex bg-muted rounded-md p-1">
+                                <button
+                                    onClick={() => setExerciseCountMode('global')}
+                                    className={cn(
+                                        "text-xs font-medium px-3 py-1.5 rounded-sm transition-all flex-1 text-center",
+                                        exerciseCountMode === 'global'
+                                            ? "bg-background shadow-sm text-foreground"
+                                            : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    Συνολικό πλήθος
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setExerciseCountMode('per-section');
+                                        // Ensure counts are synced when switching mode
+                                        const resolved = resolveSyllabusNodes(selectedNodeIds);
+                                        setSectionExerciseCounts(prev => syncSectionExerciseCounts(prev, resolved));
+                                    }}
+                                    className={cn(
+                                        "text-xs font-medium px-3 py-1.5 rounded-sm transition-all flex-1 text-center",
+                                        exerciseCountMode === 'per-section'
+                                            ? "bg-background shadow-sm text-foreground"
+                                            : "text-muted-foreground hover:text-foreground"
+                                    )}
+                                >
+                                    Ανά ενότητα
+                                </button>
+                            </div>
+
+                            {/* Global count */}
+                            {exerciseCountMode === 'global' && (
+                                <div className="space-y-1">
+                                    <Label>Ασκήσεις ({exerciseCount})</Label>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        max={20}
+                                        value={exerciseCount}
+                                        onChange={(e) => setExerciseCount(Number(e.target.value))}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Per-section count */}
+                            {exerciseCountMode === 'per-section' && (
+                                <SectionExerciseList
+                                    selectedNodeIds={selectedNodeIds}
+                                    items={sectionExerciseCounts}
+                                    onChange={setSectionExerciseCounts}
+                                />
+                            )}
                         </div>
 
                         {/* Options */}

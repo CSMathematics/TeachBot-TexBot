@@ -45,6 +45,11 @@ export type Difficulty = 'Easy' | 'Medium' | 'Hard' | 'Olympiad';
 export type SubjectType = 'Algebra' | 'Geometry' | 'Calculus' | 'Physics' | 'Statistics';
 
 export interface Question {
+  syllabusId: string;
+  parentId: string | null;
+  nodeType: 'FIELD' | 'CHAPTER' | 'SECTION' | 'PARAGRAPH' | 'EXERCISE_TYPE' | 'CONTENT_ITEM';
+  contentType?: 'THEORY' | 'METHODOLOGY';
+  orderIndex: number;
   id: string;
   content: string;
   solution: string;
@@ -75,8 +80,17 @@ export interface Exam {
 
 // ─── Generation Parameters ──────────────────────────────────────────
 
+export interface QuestionTopic {
+  id: string;
+  topic: string;
+  selectedNodeIds: string[];
+  gradeLevel?: string;
+}
+
 export interface GenerationParams {
   topic: string;
+  topicMode?: 'global' | 'per-question';
+  questionTopics?: QuestionTopic[];
   gradeLevel: string;
   difficulty: number; // 1-5 slider
   questionCount: number;
@@ -89,6 +103,13 @@ export interface GenerationParams {
   templateStyle?: 'classic' | 'modern' | 'scientific';
   mainColor?: string;
   solutionsMode?: 'none' | 'inline' | 'separate';
+}
+
+export interface SectionExerciseCount {
+  nodeId: string;
+  nodeName: string;
+  parentName?: string;
+  count: number;
 }
 
 export interface ExerciseParams {
@@ -217,12 +238,14 @@ export interface SyllabusChapter {
   Id: string;
   Name: string;
   Field: string;
+  prerequisites?: string;
 }
 
 export interface SyllabusSection {
   Id: string;
   Name: string;
   Chapter: string;
+  prerequisites?: string;
 }
 
 export interface SyllabusExerciseType {
@@ -237,7 +260,28 @@ export interface SectionExerciseMapping {
 
 // Tree nodes for rendering
 export interface SyllabusSectionNode extends SyllabusSection {
+  paragraphs: SyllabusParagraphNode[];
+  // Legacy support for direct children if needed, or we move them to paragraphs
   exerciseTypes: SyllabusExerciseType[];
+  exerciseCount: number;
+}
+
+export interface SyllabusParagraph {
+  Id: string;
+  Name: string;
+  Section: string;
+  contentType?: 'THEORY' | 'METHODOLOGY';
+}
+
+export interface SyllabusNode {
+  id: string;
+  name: string; // Helper for legacy compatibility if we map title -> name
+  title: string;
+}
+
+export interface SyllabusParagraphNode extends SyllabusParagraph {
+  exerciseTypes: SyllabusExerciseType[]; // Legacy? Or keep for specific methods if using EXERCISE_TYPE
+  contentItems: SyllabusNode[]; // New generic content items
   exerciseCount: number;
 }
 

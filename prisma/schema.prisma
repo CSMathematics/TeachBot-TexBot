@@ -1,0 +1,143 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────
+
+enum Role {
+  OWNER       // Can manage billing, invite members
+  ADMIN       // Can manage content, classes
+  TEACHER     // Can create content, assign to classes
+  STUDENT     // Read-only (Consumer)
+}
+
+enum SyllabusType {
+  SYSTEM        // Official National Curriculum (Read-only for most)
+  ORGANIZATION  // Created by a School for its teachers
+  PERSONAL      // Created by an individual teacher
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+// ─── Identity & Access Management ───────────────────────────────────
+
+model Organization {
+  id               String           @id @default(uuid())
+  name             String
+  slug             String           @unique // for subdomains or easy URLs
+  subscriptionPlan SubscriptionPlan @default(FREE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  users            User[]
+  syllabuses       Syllabus[]
+  classes          Class[]
+}
+
+model User {
+  id             String        @id @default(uuid())
+  email          String        @unique
+  name           String?
+  role           Role          @default(TEACHER)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Multi-tenancy
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  // Content
+  createdSyllabuses Syllabus[]
+}
+
+// ─── Syllabus & Content ─────────────────────────────────────────────
+
+model Syllabus {
+  id           String       @id @default(uuid())
+  name         String
+  description  String?
+  gradeLevel   String?      // e.g. "Α' Λυκείου", "Β' Λυκείου", "Γ' Λυκείου"
+  type         SyllabusType
+  isPublic     Boolean      @default(false)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  // Ownership
+  ownerId      String?      // If Personal
+  owner        User?        @relation(fields: [ownerId], references: [id])
+  orgId        String?      // If Organization
+  organization Organization? @relation(fields: [orgId], references: [id])
+
+  // Version control
+  clonedFromId String?      // ID of the Syllabus this was cloned from
+
+  nodes        SyllabusNode[]
+  classes      Class[]
+}
+
+model SyllabusNode {
+  id          String   @id @default(uuid())
+  syllabusId  String
+  syllabus    Syllabus @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
+
+  parentId    String?
+  parent      SyllabusNode?  @relation("NodeHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children    SyllabusNode[] @relation("NodeHierarchy")
+
+  title       String
+  nodeType    String   // FIELD, CHAPTER, SECTION, PARAGRAPH, EXERCISE_GROUP
+  contentType String?  // THEORY, METHODOLOGY (Applicable for PARAGRAPH)
+  orderIndex  Int      // For sorting
+  metadata    Json?    // Store tags, difficulty, etc.
+  prerequisites String? // Free-text prerequisites (e.g. "Βασικά Όρια, Συνέχεια Συνάρτησης")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ─── Class Management ───────────────────────────────────────────────
+
+model Class {
+  id           String   @id @default(uuid())
+  name         String
+  academicYear String
+
+  // Ownership
+  orgId        String?
+  organization Organization? @relation(fields: [orgId], references: [id])
+
+  // Curriculum
+  syllabusId   String
+  syllabus     Syllabus @relation(fields: [syllabusId], references: [id])
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Members
+  // students Student[] // TODO: Add Student model later
+}
+
+model ExerciseType {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  isSystem    Boolean  @default(false) // If true, available to everyone
+  
+  // Ownership (if custom type)
+  ownerId     String?
+  orgId       String?
+
+  createdAt   DateTime @default(now())
+}
