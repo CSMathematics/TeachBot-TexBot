@@ -417,6 +417,135 @@ app.delete('/api/exercise-type/:id', async (req, res) => {
     }
 });
 
+// ─── Exercises ────────────────────────────────────────────────────────
+app.get('/api/exercises', async (req, res) => {
+    try {
+        const { topicId, difficulty, isPublic, ownerId } = req.query;
+
+        const whereClause: any = {};
+        if (topicId) whereClause.topicId = String(topicId);
+        if (difficulty) whereClause.difficulty = Number(difficulty);
+        if (isPublic !== undefined) whereClause.isPublic = isPublic === 'true';
+        if (ownerId) whereClause.ownerId = String(ownerId);
+
+        // If not explicit owner, we might want to return public ones AND owner's
+        // Simplification for MVP: Return exactly what filters ask for
+
+        const exercises = await (prisma as any).exercise.findMany({
+            where: whereClause,
+            orderBy: { createdAt: 'desc' },
+            include: { exerciseType: true, topic: true }
+        });
+
+        res.json(exercises);
+    } catch (error) {
+        console.error('Error fetching exercises:', error);
+        res.status(500).json({ error: 'Failed to fetch exercises' });
+    }
+});
+
+app.post('/api/exercises', async (req, res) => {
+    try {
+        const data = req.body;
+
+        if (!data.content) {
+            return res.status(400).json({ error: 'Missing required field: content' });
+        }
+
+        const exercise = await (prisma as any).exercise.create({
+            data: {
+                title: data.title,
+                content: data.content,
+                difficulty: data.difficulty || 3,
+                typeId: data.typeId,
+                hasSolution: !!data.solution || data.hasSolution,
+                solution: data.solution,
+                description: data.description,
+                bibliography: data.bibliography,
+                tags: data.tags,
+                isPublic: !!data.isPublic,
+                ownerId: data.ownerId, // from auth in real system
+                orgId: data.orgId,
+                topicId: data.topicId,
+            }
+        });
+
+        res.status(201).json(exercise);
+    } catch (error) {
+        console.error('Error creating exercise:', error);
+        res.status(500).json({ error: 'Failed to create exercise' });
+    }
+});
+
+app.put('/api/exercises/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = req.body;
+
+        const exercise = await (prisma as any).exercise.update({
+            where: { id },
+            data: {
+                title: data.title,
+                content: data.content,
+                difficulty: data.difficulty,
+                typeId: data.typeId,
+                hasSolution: data.solution ? true : data.hasSolution,
+                solution: data.solution,
+                description: data.description,
+                bibliography: data.bibliography,
+                tags: data.tags,
+                isPublic: data.isPublic,
+                topicId: data.topicId,
+            }
+        });
+
+        res.json(exercise);
+    } catch (error) {
+        console.error('Error updating exercise:', error);
+        res.status(500).json({ error: 'Failed to update exercise' });
+    }
+});
+
+app.get('/api/exercises/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const exercise = await (prisma as any).exercise.findUnique({
+            where: { id },
+            include: { exerciseType: true, topic: true }
+        });
+
+        if (!exercise) return res.status(404).json({ error: 'Exercise not found' });
+        res.json(exercise);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch exercise' });
+    }
+});
+
+app.post('/api/exercises/:id/record-usage', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const exercise = await (prisma as any).exercise.update({
+            where: { id },
+            data: {
+                usageStatistics: { increment: 1 }
+            }
+        });
+        res.json({ success: true, usageStatistics: exercise.usageStatistics });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to record usage' });
+    }
+});
+
+app.delete('/api/exercises/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await (prisma as any).exercise.delete({ where: { id } });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete exercise' });
+    }
+});
+
 app.listen(port, () => {
     console.log(`🚀 SaaS API Server running at http://localhost:${port}`);
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Wand2, BookOpen, GraduationCap, Settings, Bot, FileText, GitBranch, Layout, LayoutTemplate } from 'lucide-react';
+import { LayoutDashboard, Wand2, BookOpen, GraduationCap, Settings, Bot, FileText, GitBranch, Layout, LayoutTemplate, Square, SquarePen } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { AGENT_REGISTRY } from '../services/agentRegistry';
 
@@ -10,6 +10,7 @@ const links = [
   { to: '/studio', icon: Layout, label: 'Doc Studio' },
   { to: '/create', icon: Wand2, label: 'Exam Creator' },
   { to: '/worksheet', icon: FileText, label: 'Worksheet' },
+  { to: '/exercise-creator', icon: SquarePen, label: 'Exercise Creator' },
   { to: '/flowchart', icon: GitBranch, label: 'Flowchart' },
   { to: '/studio/template', icon: LayoutTemplate, label: 'Templates' },
   { to: '/library', icon: BookOpen, label: 'Library' },

@@ -21,6 +21,7 @@ import MermaidChart from '../components/MermaidChart';
 import { Dialog, DialogContent } from '../components/ui';
 import { useGeneratorPipeline } from '../hooks/useGeneratorPipeline';
 import { useToast } from '../components/Toast';
+import { ExerciseBankModal } from '../components/ExerciseBankModal';
 
 const WorksheetGenerator: React.FC = () => {
     const { settings } = useSettings();
@@ -57,6 +58,25 @@ const WorksheetGenerator: React.FC = () => {
     // Per-section exercise count
     const [exerciseCountMode, setExerciseCountMode] = useState<'global' | 'per-section'>('global');
     const [sectionExerciseCounts, setSectionExerciseCounts] = useState<SectionExerciseCount[]>([]);
+
+    // Bank Modal
+    const [bankModalOpen, setBankModalOpen] = useState(false);
+
+    const handleAddFromBank = (ex: any) => {
+        const newEx = {
+            latex: ex.content,
+            metadata: { difficulty: ex.difficulty, tags: ex.tags },
+            solution: ex.solution
+        };
+
+        if (result) {
+            setResult({ exercises: [...result.exercises, newEx], count: result.count + 1 });
+        } else {
+            setResult({ exercises: [newEx], count: 1 });
+            // ensure we switch to preview to see it
+            pipeline.setActiveTab('preview');
+        }
+    };
 
     // Agents - dynamic pipeline
     const getActiveAgents = (): Agent[] => {
@@ -501,7 +521,7 @@ const WorksheetGenerator: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="p-4 border-t border-border bg-background/50 backdrop-blur">
+                <div className="p-4 border-t border-border bg-background/50 backdrop-blur space-y-3">
                     <Button
                         onClick={handleGenerate}
                         disabled={loading}
@@ -510,8 +530,21 @@ const WorksheetGenerator: React.FC = () => {
                         {loading ? <RefreshCw className="animate-spin h-4 w-4" /> : <Wand2 className="h-4 w-4" />}
                         {loading ? "Δημιουργία..." : "Δημιουργία Φυλλαδίου"}
                     </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => setBankModalOpen(true)}
+                        className="w-full gap-2 h-10 text-sm border-dashed border-2 hover:border-solid transition-all"
+                    >
+                        <BookOpen className="h-4 w-4 text-blue-500" />
+                        Προσθήκη από Τράπεζα
+                    </Button>
                 </div>
             </div>
+            <ExerciseBankModal
+                open={bankModalOpen}
+                onOpenChange={setBankModalOpen}
+                onSelect={handleAddFromBank}
+            />
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col bg-secondary/30">

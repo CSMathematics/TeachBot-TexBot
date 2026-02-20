@@ -44,6 +44,7 @@ model Organization {
   users            User[]
   syllabuses       Syllabus[]
   classes          Class[]
+  exercises        Exercise[]
 }
 
 model User {
@@ -60,6 +61,7 @@ model User {
 
   // Content
   createdSyllabuses Syllabus[]
+  exercises         Exercise[]
 }
 
 // ─── Syllabus & Content ─────────────────────────────────────────────
@@ -105,6 +107,7 @@ model SyllabusNode {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  exercises   Exercise[]
 }
 
 // ─── Class Management ───────────────────────────────────────────────
@@ -140,4 +143,34 @@ model ExerciseType {
   orgId       String?
 
   createdAt   DateTime @default(now())
+  exercises   Exercise[]
+}
+
+model Exercise {
+  id              String         @id @default(uuid())
+  title           String?
+  content         String         // The main LaTeX content
+  difficulty      Int            @default(3) // 1-5 scale
+  typeId          String?        
+  exerciseType    ExerciseType?  @relation(fields: [typeId], references: [id])
+  hasSolution     Boolean        @default(false)
+  solution        String?        // LaTeX solution
+  description     String?
+  bibliography    String?
+  tags            Json?          // Array of strings
+  usageStatistics Int            @default(0) // incremented when added to exams/worksheets
+  isPublic        Boolean        @default(false)
+  
+  // Relations
+  ownerId         String?        
+  owner           User?          @relation(fields: [ownerId], references: [id])
+  orgId           String?
+  organization    Organization?  @relation(fields: [orgId], references: [id])
+  
+  // Link to curriculum
+  topicId         String?        
+  topic           SyllabusNode?  @relation(fields: [topicId], references: [id])
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 }

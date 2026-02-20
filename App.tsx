@@ -13,6 +13,7 @@ import Settings from './pages/Settings';
 import FlowchartGenerator from './pages/FlowchartGenerator';
 import DocumentStudioLayout from './pages/DocumentStudioLayout';
 import DocumentStudioHome from './pages/DocumentStudioHome';
+import ExerciseCreator from './pages/ExerciseCreator';
 
 import DocumentBuilder from './pages/DocumentBuilder';
 import SyllabusNew from './pages/SyllabusNew';
@@ -37,7 +38,7 @@ function App() {
                 <Route path="/agents" element={<AgentHub />} />
                 <Route path="/create" element={<ExamGenerator />} />
                 <Route path="/worksheet" element={<WorksheetGenerator />} />
-                <Route path="/library" element={<Library />} />
+                <Route path="/exercise-creator" element={<ExerciseCreator />} />
                 <Route path="/library" element={<Library />} />
                 <Route path="/curriculum/new" element={<SyllabusNew />} />
                 <Route path="/curriculum/editor" element={<Curriculum />} />

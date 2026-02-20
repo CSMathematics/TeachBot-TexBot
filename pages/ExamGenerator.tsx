@@ -9,7 +9,7 @@ import TopicSelector from '../components/TopicSelector';
 import QuestionTopicList from '../components/QuestionTopicList';
 import PrerequisiteChecker from '../components/PrerequisiteChecker';
 import LatexFixer from '../components/LatexFixer';
-import { Save, Download, ChevronLeft, RefreshCw, Wand2, Copy, Clock, Wrench, GitBranch } from 'lucide-react';
+import { Save, Download, ChevronLeft, RefreshCw, Wand2, Copy, Clock, Wrench, GitBranch, BookOpen } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button, Input, Select, Label, Card, CardHeader, CardTitle, CardContent, Dialog, DialogContent } from '../components/ui';
 import PdfPreview from '../components/PdfPreview';
@@ -21,6 +21,7 @@ import { cn } from '../lib/utils';
 import { useGeneratorPipeline } from '../hooks/useGeneratorPipeline';
 import { useSettings } from '../contexts/SettingsContext';
 import { useToast } from '../components/Toast';
+import { ExerciseBankModal } from '../components/ExerciseBankModal';
 
 const ExamGenerator: React.FC = () => {
   const { settings } = useSettings();
@@ -38,6 +39,38 @@ const ExamGenerator: React.FC = () => {
 
   // Per-question topic selection
   const [topicMode, setTopicMode] = useState<'global' | 'per-question'>('global');
+  const [bankModalOpen, setBankModalOpen] = useState(false);
+
+  const handleAddFromBank = (ex: any) => {
+    const newQuestion = {
+      id: crypto.randomUUID(),
+      syllabusId: 'mock',
+      parentId: null,
+      nodeType: 'PARAGRAPH',
+      orderIndex: exam ? exam.questions.length : 0,
+      type: 'exercise',
+      content: ex.content,
+      difficulty: ex.difficulty,
+      points: 10,
+      solution: ex.solution || '',
+      tags: ex.tags || []
+    };
+    if (exam) {
+      setExam({ ...exam, questions: [...exam.questions, newQuestion] });
+    } else {
+      setExam({
+        id: crypto.randomUUID(),
+        title: `Διαγώνισμα: Επιλεγμένες Ασκήσεις`,
+        createdAt: new Date().toISOString(),
+        subject: 'Μαθηματικά',
+        gradeLevel: grade,
+        difficulty: 3,
+        durationMinutes: duration,
+        questions: [newQuestion]
+      });
+      pipeline.setActiveTab('preview');
+    }
+  };
   const [questionTopics, setQuestionTopics] = useState<QuestionTopic[]>([
     { id: crypto.randomUUID(), topic: '', selectedNodeIds: [] },
   ]);
@@ -493,7 +526,7 @@ const ExamGenerator: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 border-t border-border bg-background/50 backdrop-blur">
+        <div className="p-4 border-t border-border bg-background/50 backdrop-blur space-y-3">
           <Button
             onClick={simulateAgentWorkflow}
             disabled={loading}
@@ -502,8 +535,21 @@ const ExamGenerator: React.FC = () => {
             {loading ? <RefreshCw className="animate-spin h-4 w-4" /> : <Wand2 className="h-4 w-4" />}
             {loading ? "Generative AI Working..." : "Δημιουργία Διαγωνίσματος"}
           </Button>
+          <Button
+            variant="secondary"
+            onClick={() => setBankModalOpen(true)}
+            className="w-full gap-2 h-10 text-sm border-dashed border-2 hover:border-solid transition-all"
+          >
+            <BookOpen className="h-4 w-4 text-blue-500" />
+            Προσθήκη από Τράπεζα
+          </Button>
         </div>
       </div>
+      <ExerciseBankModal
+        open={bankModalOpen}
+        onOpenChange={setBankModalOpen}
+        onSelect={handleAddFromBank}
+      />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col bg-secondary/30">
