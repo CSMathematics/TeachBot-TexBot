@@ -34,7 +34,7 @@ DifficultyCalibrator = safe_import("agents.education.difficulty_calibrator", "Di
 HintGenerator = safe_import("agents.education.hint_generator", "HintGenerator")
 PitfallDetector = safe_import("agents.education.pitfall_detector", "PitfallDetector")
 RubricDesigner = safe_import("agents.education.rubric_designer", "RubricDesigner")
-MindmapGenerator = safe_import("agents.education.mindmap_generator", "MindmapGenerator")
+FlowchartGenerator = safe_import("agents.education.flowchart_generator", "FlowchartGenerator") # Reload v10
 PrerequisiteChecker = safe_import("agents.education.prerequisite_checker", "PrerequisiteChecker")
 MultiMethodSolver = safe_import("agents.education.multi_method_solver", "MultiMethodSolver")
 PanhellenicFormatter = safe_import("agents.education.panhellenic_formatter", "PanhellenicFormatter")
@@ -172,9 +172,10 @@ class PrerequisiteRequest(BaseModel):
     topic: str
     gradeLevel: Optional[str] = None
 
-# Mindmap
-class MindmapRequest(BaseModel):
+# Flowchart
+class FlowchartRequest(BaseModel):
     topic: str
+    method: Optional[str] = None
 
 # Multi-Method
 class MultiMethodRequest(BaseModel):
@@ -250,7 +251,7 @@ def list_agents():
         AgentInfo(id="hint-generator", name="Hint Designer", nameEl="Σχεδιαστής Υποδείξεων", domain="EDUCATION", description="Progressive hints", endpoint="/api/generate-hints", status="online" if HintGenerator else "offline"),  # type: ignore
         AgentInfo(id="pitfall-detector", name="Pitfall Detector", nameEl="Ανιχνευτής Παγίδων", domain="EDUCATION", description="Common student errors", endpoint="/api/detect-pitfalls", status="online" if PitfallDetector else "offline"),  # type: ignore
         AgentInfo(id="rubric-designer", name="Rubric Designer", nameEl="Σχεδιαστής Κριτηρίων", domain="EDUCATION", description="Grading rubrics", endpoint="/api/generate-rubric", status="online" if RubricDesigner else "offline"),  # type: ignore
-        AgentInfo(id="mindmap-generator", name="Mindmap Generator", nameEl="Γεννήτρια Εννοιολογικών Χαρτών", domain="EDUCATION", description="Concept maps", endpoint="/api/generate-mindmap", status="online" if MindmapGenerator else "offline"),  # type: ignore
+        AgentInfo(id="flowchart-generator", name="Flowchart Generator", nameEl="Γεννήτρια Διαγραμμάτων Ροής", domain="EDUCATION", description="Solution flowcharts", endpoint="/api/generate-flowchart", status="online" if FlowchartGenerator else "offline"),  # type: ignore
         AgentInfo(id="prerequisite-checker", name="Prerequisite Checker", nameEl="Ελεγκτής Προαπαιτουμένων", domain="EDUCATION", description="Prerequisite validation", endpoint="/api/check-prerequisites", status="online" if PrerequisiteChecker else "offline"),  # type: ignore
         AgentInfo(id="multi-method-solver", name="Multi-Method Solver", nameEl="Πολυμεθοδικός Λύτης", domain="EDUCATION", description="Multiple solving methods", endpoint="/api/multi-method-solve", status="online" if MultiMethodSolver else "offline"),  # type: ignore
         AgentInfo(id="panhellenic-formatter", name="Panhellenic Formatter", nameEl="Μορφοποιητής Πανελληνίων", domain="EDUCATION", description="Panhellenic exam style", endpoint="/api/format-panhellenic", status="online" if PanhellenicFormatter else "offline"),  # type: ignore
@@ -413,12 +414,12 @@ async def generate_rubric(request: RubricRequest):
     return RubricResponse(**result)  # type: ignore
 
 
-@app.post("/api/generate-mindmap")
-async def generate_mindmap(request: MindmapRequest):
-    """Generate concept mindmap structure."""
-    require_agent(MindmapGenerator, "MindmapGenerator")  # type: ignore
-    gen = MindmapGenerator()
-    return gen.generate_mindmap_data(request.topic)
+@app.post("/api/generate-flowchart")
+async def generate_flowchart(request: FlowchartRequest):
+    """Generate solution flowchart."""
+    require_agent(FlowchartGenerator, "FlowchartGenerator")  # type: ignore
+    gen = FlowchartGenerator()
+    return gen.generate_flowchart(request.topic, request.method)
 
 
 @app.post("/api/check-prerequisites")
@@ -447,49 +448,103 @@ async def format_panhellenic(request: PanhellenicRequest):
 
 # ── Document Endpoints ───────────────────────────────────────────────
 
+# ── Document Endpoints ───────────────────────────────────────────────
+
 @app.post("/api/build-document", response_model=LaTeXResponse)
-async def build_document(request: DocumentRequest):
+async def build_document(request: DocumentRequest, x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-API-Key")):
     """Build a LaTeX document."""
     require_agent(DocumentBuilder, "DocumentBuilder")  # type: ignore
-    builder = DocumentBuilder()
+    builder = DocumentBuilder(api_key=x_gemini_api_key)
     result = builder.build(request.type, request.title, request.content or "")
     return LaTeXResponse(**result)  # type: ignore
 
 
 @app.post("/api/generate-figure", response_model=LaTeXResponse)
-async def generate_figure(request: FigureRequest):
+async def generate_figure(request: FigureRequest, x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-API-Key")):
     """Generate TikZ figure."""
     require_agent(TikZExpert, "TikZExpert")  # type: ignore
-    expert = TikZExpert()
+    expert = TikZExpert(api_key=x_gemini_api_key)
     result = expert.generate_figure(request.description)
     return LaTeXResponse(**result)  # type: ignore
 
 
 @app.post("/api/format-table", response_model=LaTeXResponse)
-async def format_table(request: TableRequest):
+async def format_table(request: TableRequest, x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-API-Key")):
     """Format a LaTeX table."""
     require_agent(TableFormatter, "TableFormatter")  # type: ignore
-    formatter = TableFormatter()
+    formatter = TableFormatter(api_key=x_gemini_api_key)
     result = formatter.format_table(request.data, request.headers, request.style or "booktabs")
     return LaTeXResponse(latex=result.get("latex", ""), metadata=result.get("metadata"))  # type: ignore
 
 
 @app.post("/api/create-presentation", response_model=LaTeXResponse)
-async def create_presentation(request: PresentationRequest):
+async def create_presentation(request: PresentationRequest, x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-API-Key")):
     """Create Beamer presentation."""
     require_agent(BeamerCreator, "BeamerCreator")  # type: ignore
-    creator = BeamerCreator()
+    creator = BeamerCreator(api_key=x_gemini_api_key)
     result = creator.create(request.title, request.topic, request.slideCount)
     return LaTeXResponse(**result)  # type: ignore
 
 
 @app.post("/api/fix-latex", response_model=LaTeXResponse)
-async def fix_latex(request: FixRequest):
+async def fix_latex(request: FixRequest, x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-API-Key")):
     """Fix LaTeX compilation errors."""
     require_agent(FixAgent, "FixAgent")  # type: ignore
-    fixer = FixAgent()
+    fixer = FixAgent(api_key=x_gemini_api_key)
     result = fixer.fix(request.latexCode, request.errorMessage or "")
     return LaTeXResponse(**result)  # type: ignore
+
+
+# Bibliography
+class BibliographyRequest(BaseModel):
+    entries: str
+    style: Optional[str] = "apa"
+
+@app.post("/api/manage-bibliography", response_model=LaTeXResponse)
+async def manage_bibliography(request: BibliographyRequest, x_gemini_api_key: Optional[str] = Header(None, alias="X-Gemini-API-Key")):
+    """Format bibliography entries."""
+    require_agent(BibliographyManager, "BibliographyManager")  # type: ignore
+    manager = BibliographyManager(api_key=x_gemini_api_key)
+    # The manager currently has format_citation, let's adapt it to handle multiple entries
+    result_latex = ""
+    for entry in request.entries.split('\n'):
+        if entry.strip():
+             result_latex += manager.format_citation(entry.strip(), request.style or "apa") + "\n"
+    
+    return LaTeXResponse(latex=result_latex, type="bibliography")
+
+
+# ── PDF Compilation ──────────────────────────────────────────────────
+
+from fastapi.responses import Response
+
+class CompileRequest(BaseModel):
+    latexCode: str
+
+try:
+    from api.compile import compile_latex_to_pdf
+except ImportError:
+    # Fallback if running from a different directory context
+    try:
+        from compile import compile_latex_to_pdf
+    except ImportError:
+        compile_latex_to_pdf = None
+
+@app.post("/api/compile-pdf")
+async def compile_pdf(request: CompileRequest):
+    """Compiles LaTeX to PDF and returns the binary file."""
+    if compile_latex_to_pdf is None:
+        raise HTTPException(status_code=500, detail="Compilation module not found")
+        
+    try:
+        pdf_bytes = compile_latex_to_pdf(request.latexCode)
+        return Response(content=pdf_bytes, media_type="application/pdf")
+    except RuntimeError as e:
+        error_msg = str(e)
+        # Return 400 for compilation errors so frontend can display the log
+        raise HTTPException(status_code=400, detail=error_msg)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ── Orchestrator (Auto-detect) ───────────────────────────────────────
@@ -505,7 +560,7 @@ async def orchestrate(request: OrchestrateRequest):
 
     EDUCATION_KW = ["άσκηση", "φυλλάδιο", "διαγώνισμα", "τεστ", "λύση",
                      "πανελλήνιες", "παραλλαγή", "rubric", "βαθμολογία",
-                     "θεωρία", "mindmap", "υπόδειξη", "hints", "λάθη",
+                     "θεωρία", "flowchart", "διάγραμμα ροής", "υπόδειξη", "hints", "λάθη",
                      "προαπαιτούμενα", "μέθοδοι", "exercise", "exam"]
 
     DOCUMENT_KW = ["έγγραφο", "article", "report", "σχήμα", "γράφημα",

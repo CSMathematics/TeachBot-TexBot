@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Wand2, BookOpen, GraduationCap, Settings, Bot, FileText, Network, Layout } from 'lucide-react';
+import { LayoutDashboard, Wand2, BookOpen, GraduationCap, Settings, Bot, FileText, GitBranch, Layout, LayoutTemplate } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { AGENT_REGISTRY } from '../services/agentRegistry';
 
@@ -10,7 +10,8 @@ const links = [
   { to: '/studio', icon: Layout, label: 'Doc Studio' },
   { to: '/create', icon: Wand2, label: 'Exam Creator' },
   { to: '/worksheet', icon: FileText, label: 'Worksheet' },
-  { to: '/mindmaps', icon: Network, label: 'Mindmaps' },
+  { to: '/flowchart', icon: GitBranch, label: 'Flowchart' },
+  { to: '/studio/template', icon: LayoutTemplate, label: 'Templates' },
   { to: '/library', icon: BookOpen, label: 'Library' },
   { to: '/curriculum', icon: GraduationCap, label: 'Curriculum' },
   { to: '/settings', icon: Settings, label: 'Settings' },
@@ -20,9 +21,9 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
 
   return (
-    <aside className="w-64 h-screen glass border-r border-white/20 flex flex-col z-50 relative">
+    <aside className="w-64 h-screen glass border-r border-white/20 dark:border-white/5 flex flex-col z-50 relative">
       {/* Logo */}
-      <div className="p-6 border-b border-white/10">
+      <div className="p-6 border-b border-white/10 dark:border-white/5">
         <Link to="/" className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
             <Bot className="w-6 h-6 text-primary" />
@@ -47,7 +48,7 @@ const Sidebar: React.FC = () => {
                 "flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all duration-200 group relative overflow-hidden",
                 isActive
                   ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                  : "text-muted-foreground hover:bg-white/50 hover:text-foreground hover:shadow-sm"
+                  : "text-muted-foreground hover:bg-white/50 dark:hover:bg-white/5 hover:text-foreground hover:shadow-sm"
               )}
             >
               <Icon className={cn("w-5 h-5 transition-transform duration-200 group-hover:scale-110", isActive && "bg-transparent")} />
@@ -59,7 +60,7 @@ const Sidebar: React.FC = () => {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-white/10 bg-white/30 backdrop-blur-sm">
+      <div className="p-4 border-t border-white/10 dark:border-white/5 bg-white/30 dark:bg-black/20 backdrop-blur-sm">
         <div className="text-xs text-muted-foreground px-2 flex justify-between items-center">
           <span className="font-medium opacity-80">EduTeX v2.1</span>
           <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full border border-primary/10">

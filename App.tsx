@@ -10,8 +10,10 @@ import WorksheetGenerator from './pages/WorksheetGenerator';
 import Library from './pages/Library';
 import Curriculum from './pages/Curriculum';
 import Settings from './pages/Settings';
-import MindmapGenerator from './pages/MindmapGenerator';
-import DocumentStudio from './pages/DocumentStudio';
+import FlowchartGenerator from './pages/FlowchartGenerator';
+import DocumentStudioLayout from './pages/DocumentStudioLayout';
+import DocumentStudioHome from './pages/DocumentStudioHome';
+
 import DocumentBuilder from './pages/DocumentBuilder';
 import SyllabusNew from './pages/SyllabusNew';
 import PresentationCreator from './pages/PresentationCreator';
@@ -27,7 +29,7 @@ function App() {
       <ToastProvider>
         <Router>
           <div className="flex h-screen bg-background text-foreground overflow-hidden selection:bg-primary/20 selection:text-primary">
-            <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-100/50 via-white to-white dark:from-slate-900 dark:via-slate-950 dark:to-black opacity-60 pointer-events-none" />
+            <div className="fixed inset-0 -z-10 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-100/50 via-white to-white dark:from-background dark:via-background dark:to-background pointer-events-none" />
             <Sidebar />
             <main className="flex-1 overflow-y-auto">
               <Routes>
@@ -40,15 +42,19 @@ function App() {
                 <Route path="/curriculum/new" element={<SyllabusNew />} />
                 <Route path="/curriculum/editor" element={<Curriculum />} />
                 <Route path="/curriculum" element={<SyllabusManager />} />
-                <Route path="/mindmaps" element={<MindmapGenerator />} />
-                <Route path="/mindmaps" element={<MindmapGenerator />} />
-                <Route path="/studio" element={<DocumentStudio />} />
-                <Route path="/studio/document" element={<DocumentBuilder />} />
-                <Route path="/studio/presentation" element={<PresentationCreator />} />
-                <Route path="/studio/figure" element={<FigureWizard />} />
-                <Route path="/studio/table" element={<TableArchitect />} />
-                <Route path="/studio/bibliography" element={<BibliographyManager />} />
-                <Route path="/studio/template" element={<TemplateCurator />} />
+                <Route path="/flowchart" element={<FlowchartGenerator />} />
+
+                {/* Document Studio Routes */}
+                <Route path="/studio" element={<DocumentStudioLayout />}>
+                  <Route index element={<DocumentStudioHome />} />
+                  <Route path="document" element={<DocumentBuilder />} />
+                  <Route path="presentation" element={<PresentationCreator />} />
+                  <Route path="figure" element={<FigureWizard />} />
+                  <Route path="table" element={<TableArchitect />} />
+                  <Route path="bibliography" element={<BibliographyManager />} />
+                  <Route path="template" element={<TemplateCurator />} />
+                </Route>
+
                 <Route path="/settings" element={<Settings />} />
               </Routes>
             </main>

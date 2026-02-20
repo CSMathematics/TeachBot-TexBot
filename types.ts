@@ -25,6 +25,13 @@ export interface Agent {
   domain: AgentDomain;
 }
 
+export interface AgentQuickAction {
+  label: string;
+  labelEl: string;
+  route?: string;       // Navigate to this page if available
+  tryAgent?: boolean;    // Opens Try Agent modal instead
+}
+
 export interface AgentCapability {
   id: string;
   name: string;
@@ -37,6 +44,8 @@ export interface AgentCapability {
   endpoint: string;
   color: string;
   visionAgent?: string; // Maps to future_ideas.md Agent letter (A-J)
+  quickAction?: AgentQuickAction;
+  capabilities?: string[]; // Bullet list for detail drawer
 }
 
 // ─── Exam Types ─────────────────────────────────────────────────────
@@ -165,9 +174,10 @@ export interface PrerequisiteParams {
   gradeLevel: string;
 }
 
-export interface MindmapParams {
+export interface FlowchartParams {
   topic: string;
   depth: number;
+  method?: string;
 }
 
 export interface MultiMethodParams {
@@ -299,14 +309,14 @@ export interface SyllabusParagraphNode extends SyllabusParagraph {
 
 export interface SyllabusChapterNode extends SyllabusChapter {
   sections: SyllabusSectionNode[];
-  totalExercises: number;
+  totalParagraphs: number;
 }
 
 export interface SyllabusFieldNode extends SyllabusField {
   chapters: SyllabusChapterNode[];
   totalChapters: number;
   totalSections: number;
-  totalExercises: number;
+  totalParagraphs: number;
 }
 
 // ─── Pipeline Types ─────────────────────────────────────────────────

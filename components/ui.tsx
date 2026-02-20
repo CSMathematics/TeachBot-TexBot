@@ -268,6 +268,8 @@ export const Textarea = React.forwardRef<
 Textarea.displayName = "Textarea";
 
 // Dialog (Simplified for this environment without Radix)
+export const DialogTrigger = ({ asChild, children, ...props }: any) => React.cloneElement(children, { ...props, onClick: (e: any) => { children.props.onClick?.(e); props.onClick?.(e); } });
+
 export const Dialog = ({ open, onOpenChange, children }: any) => {
   if (!open) return null;
   return (

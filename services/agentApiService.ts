@@ -1,7 +1,7 @@
 import {
     Exam, GenerationParams, ExerciseParams, SolutionParams,
     VariantParams, HintParams, PitfallParams, RubricParams,
-    DifficultyCalibrationParams, MindmapParams, PrerequisiteParams,
+    DifficultyCalibrationParams, FlowchartParams, PrerequisiteParams,
     MultiMethodParams, PanhellenicParams, DocumentParams,
     FigureParams, TableParams, PresentationParams, FixParams,
     ExerciseResult, LatexResult, AgentResponse
@@ -128,8 +128,8 @@ export async function apiGenerateRubric(params: RubricParams): Promise<{ rubric:
     return apiCall('/api/generate-rubric', { exercise: params.exam });
 }
 
-export async function apiGenerateMindmap(params: MindmapParams): Promise<Record<string, unknown>> {
-    return apiCall('/api/generate-mindmap', params);
+export async function apiGenerateFlowchart(params: FlowchartParams): Promise<Record<string, unknown>> {
+    return apiCall('/api/generate-flowchart', params);
 }
 
 export async function apiCheckPrerequisites(params: PrerequisiteParams): Promise<Record<string, unknown>> {
@@ -145,6 +145,11 @@ export async function apiFormatPanhellenic(params: PanhellenicParams): Promise<R
 }
 
 // ─── Document Agent Calls ───────────────────────────────────────────
+
+export interface BibliographyParams {
+    entries: string;
+    style?: string;
+}
 
 export async function apiBuildDocument(params: DocumentParams): Promise<LatexResult> {
     return apiCall('/api/build-document', params);
@@ -164,6 +169,10 @@ export async function apiCreatePresentation(params: PresentationParams): Promise
 
 export async function apiFixLatex(params: FixParams): Promise<LatexResult> {
     return apiCall('/api/fix-latex', params);
+}
+
+export async function apiGenerateBibliography(params: BibliographyParams): Promise<LatexResult> {
+    return apiCall('/api/manage-bibliography', params);
 }
 
 // ─── Orchestrator ───────────────────────────────────────────────────

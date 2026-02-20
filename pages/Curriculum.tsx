@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Plus, Trash2, Pencil, ChevronRight, ChevronDown, LayoutGrid, BookOpen, Layers, Menu, Loader2, List,
-    Search, Hash, Library, BarChart3, FileText, Grid3X3, AlertTriangle, Info
+    Search, Hash, Library, BarChart3, FileText, Grid3X3, AlertTriangle, Info,
+    Ruler, Compass, TrendingUp, Dice5, PieChart
 } from 'lucide-react';
 import { Card, CardContent, Badge } from '../components/ui';
 import { cn } from '../lib/utils';
@@ -15,12 +16,12 @@ import ParagraphContentManager from '../components/ParagraphContentManager';
 
 // ─── Field Colors ───────────────────────────────────────────────────
 
-const FIELD_COLORS: Record<string, { bg: string; text: string; accent: string; icon: string; border: string }> = {
-    Algebra: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', accent: 'bg-blue-500', icon: '📐', border: 'border-blue-500/20' },
-    Geometria: { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', accent: 'bg-emerald-500', icon: '📏', border: 'border-emerald-500/20' },
-    Analysh: { bg: 'bg-violet-500/10', text: 'text-violet-600 dark:text-violet-400', accent: 'bg-violet-500', icon: '📈', border: 'border-violet-500/20' },
-    Pithanothtes: { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', accent: 'bg-amber-500', icon: '🎲', border: 'border-amber-500/20' },
-    Statistikh: { bg: 'bg-rose-500/10', text: 'text-rose-600 dark:text-rose-400', accent: 'bg-rose-500', icon: '📊', border: 'border-rose-500/20' },
+const FIELD_COLORS: Record<string, { bg: string; text: string; accent: string; icon: React.ReactNode; border: string }> = {
+    Algebra: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400', accent: 'bg-blue-500', icon: <Ruler className="w-7 h-7" />, border: 'border-blue-500/20' },
+    Geometria: { bg: 'bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', accent: 'bg-emerald-500', icon: <Compass className="w-7 h-7" />, border: 'border-emerald-500/20' },
+    Analysh: { bg: 'bg-violet-500/10', text: 'text-violet-600 dark:text-violet-400', accent: 'bg-violet-500', icon: <TrendingUp className="w-7 h-7" />, border: 'border-violet-500/20' },
+    Pithanothtes: { bg: 'bg-amber-500/10', text: 'text-amber-600 dark:text-amber-400', accent: 'bg-amber-500', icon: <Dice5 className="w-7 h-7" />, border: 'border-amber-500/20' },
+    Statistikh: { bg: 'bg-rose-500/10', text: 'text-rose-600 dark:text-rose-400', accent: 'bg-rose-500', icon: <PieChart className="w-7 h-7" />, border: 'border-rose-500/20' },
 };
 
 const getFieldColor = (fieldId: string) => FIELD_COLORS[fieldId] ?? FIELD_COLORS.Algebra;
@@ -32,7 +33,7 @@ const Curriculum: React.FC = () => {
     const [syllabuses, setSyllabuses] = useState<{ id: string, name: string }[]>([]);
     const [selectedSyllabusId, setSelectedSyllabusId] = useState<string | null>(null);
     const [tree, setTree] = useState<SyllabusFieldNode[]>([]);
-    const [stats, setStats] = useState({ fields: 0, chapters: 0, sections: 0, exerciseTypes: 0 });
+    const [stats, setStats] = useState({ fields: 0, chapters: 0, sections: 0, paragraphs: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -200,17 +201,17 @@ const Curriculum: React.FC = () => {
             {/* Stats Row */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                    { label: 'Πεδία', value: stats.fields, icon: <Grid3X3 className="w-4 h-4" />, color: 'text-blue-500 bg-blue-500/10' },
-                    { label: 'Κεφάλαια', value: stats.chapters, icon: <BookOpen className="w-4 h-4" />, color: 'text-emerald-500 bg-emerald-500/10' },
-                    { label: 'Ενότητες', value: stats.sections, icon: <Layers className="w-4 h-4" />, color: 'text-violet-500 bg-violet-500/10' },
-                    { label: 'Τύποι Ασκήσεων', value: stats.exerciseTypes, icon: <FileText className="w-4 h-4" />, color: 'text-amber-500 bg-amber-500/10' },
+                    { label: 'Πεδία', value: stats.fields, icon: <Grid3X3 className="w-5 h-5" />, color: 'text-blue-500 bg-blue-500/10' },
+                    { label: 'Κεφάλαια', value: stats.chapters, icon: <BookOpen className="w-5 h-5" />, color: 'text-emerald-500 bg-emerald-500/10' },
+                    { label: 'Ενότητες', value: stats.sections, icon: <Layers className="w-5 h-5" />, color: 'text-violet-500 bg-violet-500/10' },
+                    { label: 'Παράγραφοι', value: stats.paragraphs, icon: <FileText className="w-5 h-5" />, color: 'text-amber-500 bg-amber-500/10' },
                 ].map(s => (
                     <Card key={s.label}>
-                        <CardContent className="p-4 flex items-center gap-3">
-                            <div className={cn("p-2 rounded-lg", s.color)}>{s.icon}</div>
+                        <CardContent className="p-5 flex items-center gap-4">
+                            <div className={cn("p-2.5 rounded-xl", s.color)}>{s.icon}</div>
                             <div>
                                 <p className="text-2xl font-bold">{s.value}</p>
-                                <p className="text-[10px] text-muted-foreground">{s.label}</p>
+                                <p className="text-xs text-muted-foreground">{s.label}</p>
                             </div>
                         </CardContent>
                     </Card>
@@ -291,12 +292,12 @@ const Curriculum: React.FC = () => {
                                 )}
                                 style={isSelected ? { '--tw-ring-color': `hsl(var(--primary) / 0.3)` } as React.CSSProperties : undefined}
                             >
-                                <div className="text-3xl mb-3">{colors.icon}</div>
-                                <h3 className="font-bold text-sm">{field.Name}</h3>
-                                <div className="mt-2 space-y-1 text-[11px] text-muted-foreground">
+                                <div className={cn("p-2.5 rounded-xl mb-3", colors.bg, colors.text)}>{colors.icon}</div>
+                                <h3 className="font-bold text-sm mt-1">{field.Name}</h3>
+                                <div className="mt-2 space-y-1 text-xs text-muted-foreground">
                                     <p>{field.totalChapters} κεφάλαια</p>
                                     <p>{field.totalSections} ενότητες</p>
-                                    <p>{field.totalExercises} τύποι ασκ.</p>
+                                    <p>{field.totalParagraphs} παράγραφοι</p>
                                 </div>
 
                                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
@@ -330,11 +331,11 @@ const Curriculum: React.FC = () => {
                 <div className="space-y-3">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                            <span className="text-2xl">{getFieldColor(activeField.Id).icon}</span>
+                            <div className={cn("p-2.5 rounded-xl", getFieldColor(activeField.Id).bg, getFieldColor(activeField.Id).text)}>{getFieldColor(activeField.Id).icon}</div>
                             <div>
                                 <h2 className="text-xl font-bold">{activeField.Name}</h2>
                                 <p className="text-xs text-muted-foreground">
-                                    {activeField.totalChapters} κεφάλαια · {activeField.totalSections} ενότητες · {activeField.totalExercises} τύποι ασκήσεων
+                                    {activeField.totalChapters} κεφάλαια · {activeField.totalSections} ενότητες · {activeField.totalParagraphs} παράγραφοι
                                 </p>
                             </div>
                         </div>
@@ -495,7 +496,7 @@ const ChapterAccordion: React.FC<ChapterAccordionProps> = ({
                             )}
                         </h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                            {chapter.sections.length} ενότητες · {chapter.totalExercises} τύποι ασκήσεων
+                            {chapter.sections.length} ενότητες · {chapter.totalParagraphs} παράγραφοι
                         </p>
                     </div>
                 </button>
@@ -576,8 +577,8 @@ const SectionRow: React.FC<SectionRowProps> = ({
     const [isExpanded, setIsExpanded] = useState(false);
     const colors = getFieldColor(fieldId);
 
-    // Calculate total exercises from paragraphs + direct types (legacy)
-    const totalExercises = (section.paragraphs?.reduce((acc, p) => acc + p.exerciseCount, 0) || 0) + (section.exerciseTypes?.length || 0);
+    // Count paragraphs in section
+    const totalParagraphs = section.paragraphs?.length || 0;
 
     return (
         <div className="border-b border-border last:border-0 group">
@@ -644,9 +645,9 @@ const SectionRow: React.FC<SectionRowProps> = ({
                 </div>
 
                 <Badge variant="outline" className="text-[9px] shrink-0">
-                    {totalExercises} τύποι
+                    {totalParagraphs} παρ.
                 </Badge>
-                {totalExercises > 0 && (
+                {totalParagraphs > 0 && (
                     isExpanded
                         ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
                         : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />

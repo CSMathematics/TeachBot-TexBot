@@ -6,11 +6,11 @@ class TikZExpert:
     Role: The "Visual Artist"
     Responsibility: Generate geometric figures and function plots using TikZ/PGFPlots.
     """
-    def __init__(self):
+    def __init__(self, api_key=None):
         self.role = "Visual Artist"
         try:
              from core.llm import LLMService
-             self.llm = LLMService()
+             self.llm = LLMService(api_key=api_key)
         except ImportError:
              self.llm = None
 

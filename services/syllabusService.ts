@@ -169,7 +169,7 @@ export async function fetchSyllabusTree(syllabusId: string): Promise<SyllabusFie
                     Field: fieldNode.id,
                     prerequisites: chapterNode.prerequisites || undefined,
                     sections,
-                    totalExercises: sections.reduce((s, sec) => s + sec.exerciseCount, 0)
+                    totalParagraphs: sections.reduce((s, sec) => sec.paragraphs.length + s, 0)
                 } as SyllabusChapterNode;
             });
 
@@ -180,7 +180,7 @@ export async function fetchSyllabusTree(syllabusId: string): Promise<SyllabusFie
             chapters,
             totalChapters: chapters.length,
             totalSections: chapters.reduce((s, c) => s + c.sections.length, 0),
-            totalExercises: chapters.reduce((s, c) => s + c.totalExercises, 0)
+            totalParagraphs: chapters.reduce((s, c) => s + c.totalParagraphs, 0)
         } as SyllabusFieldNode;
     });
 
@@ -316,12 +316,12 @@ export function searchSections(query: string): SyllabusSectionNode[] {
 }
 
 export function getSyllabusStats() {
-    if (!_syllabusCache) return { fields: 0, chapters: 0, sections: 0, exerciseTypes: 0 };
+    if (!_syllabusCache) return { fields: 0, chapters: 0, sections: 0, paragraphs: 0 };
     return {
         fields: _syllabusCache.length,
         chapters: _syllabusCache.reduce((s, f) => s + f.totalChapters, 0),
         sections: _syllabusCache.reduce((s, f) => s + f.totalSections, 0),
-        exerciseTypes: _syllabusCache.reduce((s, f) => s + f.totalExercises, 0),
+        paragraphs: _syllabusCache.reduce((s, f) => s + f.totalParagraphs, 0),
     };
 }
 

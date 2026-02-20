@@ -28,7 +28,7 @@ trigger: always_on
 | "παραλλαγή", "variant"        | `/variant`       | isomorphic-generator  | Education |
 | "rubric", "βαθμολογία"        | `/rubric`        | rubric-designer       | Education |
 | "θεωρία"                      | `/theory`        | exercise-generator    | Education |
-| "mindmap"                     | `/mindmap`       | mindmap-generator     | Education |
+| "flowchart", "διάγραμμα ροής"   | `/flowchart`     | flowchart-generator   | Education |
 | "υπόδειξη", "hints"           | `/hints`         | hint-generator        | Education |
 | "λάθη", "mistakes"            | `/mistakes`      | pitfall-detector      | Education |
 | "προαπαιτούμενα"              | `/prerequisites` | prerequisite-checker  | Education |

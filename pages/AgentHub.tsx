@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Bot, FileText, Zap, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, Button, Input } from '../components/ui';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Search, Bot, FileText, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, Button, Input } from '../components/ui';
 import AgentCard from '../components/AgentCard';
-import { AgentDomain, AgentStatus, Agent } from '../types';
+import AgentDetailDrawer from '../components/AgentDetailDrawer';
+import TryAgentDialog from '../components/TryAgentDialog';
+import { AgentDomain, AgentStatus, Agent, AgentCapability } from '../types';
 import { AGENT_REGISTRY, getEducationAgents, getDocumentAgents } from '../services/agentRegistry';
 import { checkBackendHealth, fetchAgentCatalog, AgentInfo } from '../services/agentApiService';
 import { cn } from '../lib/utils';
@@ -11,10 +13,17 @@ import { cn } from '../lib/utils';
 type TabKey = 'education' | 'documents';
 
 const AgentHub: React.FC = () => {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<TabKey>('education');
     const [searchQuery, setSearchQuery] = useState('');
     const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
     const [liveStatuses, setLiveStatuses] = useState<Record<string, string>>({});
+
+    // Drawer & Modal state
+    const [drawerAgent, setDrawerAgent] = useState<AgentCapability | null>(null);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+    const [tryAgent, setTryAgent] = useState<AgentCapability | null>(null);
+    const [tryOpen, setTryOpen] = useState(false);
 
     // Check backend health on mount
     useEffect(() => {
@@ -58,6 +67,37 @@ const AgentHub: React.FC = () => {
         domain: cap.domain,
     });
 
+    // Handle quick action: navigate to page or open Try Agent modal
+    const handleQuickAction = useCallback((cap: AgentCapability) => {
+        const qa = cap.quickAction;
+        if (!qa) return;
+
+        if (qa.route) {
+            navigate(qa.route);
+        } else if (qa.tryAgent) {
+            setTryAgent(cap);
+            setTryOpen(true);
+        }
+    }, [navigate]);
+
+    // Handle view details → open drawer
+    const handleViewDetails = useCallback((cap: AgentCapability) => {
+        setDrawerAgent(cap);
+        setDrawerOpen(true);
+    }, []);
+
+    // Close drawer
+    const handleCloseDrawer = useCallback(() => {
+        setDrawerOpen(false);
+        setTimeout(() => setDrawerAgent(null), 300); // Wait for animation
+    }, []);
+
+    // Close try agent modal
+    const handleCloseTry = useCallback(() => {
+        setTryOpen(false);
+        setTryAgent(null);
+    }, []);
+
     return (
         <div className="p-8 max-w-[1600px] mx-auto space-y-8">
             {/* Header */}
@@ -65,7 +105,7 @@ const AgentHub: React.FC = () => {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Agent Hub</h1>
                     <p className="text-muted-foreground mt-1">
-                        19 εξειδικευμένοι AI agents για εκπαίδευση &amp; έγγραφα LaTeX.
+                        19 εξειδικευμένοι AI agents — εξερεύνησε, δοκίμασε, χρησιμοποίησε.
                     </p>
                 </div>
 
@@ -86,12 +126,10 @@ const AgentHub: React.FC = () => {
                         {backendOnline === true ? 'Backend Online' : backendOnline === false ? 'Gemini Fallback' : 'Checking...'}
                     </div>
 
-                    <Link to="/create">
-                        <Button className="gap-2">
-                            <Zap size={16} />
-                            Create Exam
-                        </Button>
-                    </Link>
+                    <Button className="gap-2" onClick={() => navigate('/create')}>
+                        <Zap size={16} />
+                        Create Exam
+                    </Button>
                 </div>
             </header>
 
@@ -133,7 +171,7 @@ const AgentHub: React.FC = () => {
                 <div className="relative max-w-xs w-full">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search agents..."
+                        placeholder="Αναζήτηση agents..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="pl-9"
@@ -147,7 +185,10 @@ const AgentHub: React.FC = () => {
                     <AgentCard
                         key={cap.id}
                         agent={toDisplayAgent(cap)}
+                        agentCapability={cap}
                         variant="full"
+                        onQuickAction={() => handleQuickAction(cap)}
+                        onViewDetails={() => handleViewDetails(cap)}
                     />
                 ))}
             </div>
@@ -155,7 +196,7 @@ const AgentHub: React.FC = () => {
             {filteredAgents.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
                     <Bot className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">No agents match your search.</p>
+                    <p className="text-sm">Κανένας agent δεν ταιριάζει στην αναζήτηση.</p>
                 </div>
             )}
 
@@ -176,6 +217,21 @@ const AgentHub: React.FC = () => {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Detail Drawer (slide-over) */}
+            <AgentDetailDrawer
+                agent={drawerAgent}
+                open={drawerOpen}
+                onClose={handleCloseDrawer}
+                onQuickAction={handleQuickAction}
+            />
+
+            {/* Try Agent Modal */}
+            <TryAgentDialog
+                agent={tryAgent}
+                open={tryOpen}
+                onClose={handleCloseTry}
+            />
         </div>
     );
 };

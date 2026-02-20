@@ -1,9 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Layout, Image, Table as TableIcon, Presentation, BookOpen, LayoutTemplate } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui';
+import { Card, CardHeader, CardTitle, CardDescription } from '../components/ui';
 
-const DocumentStudio: React.FC = () => {
+const DocumentStudioHome: React.FC = () => {
     const tools = [
         { title: 'Article Writer', description: 'Create academic papers and reports', icon: FileText, color: 'text-orange-500', href: '/studio/document' },
         { title: 'Presentation Maker', description: 'Generate Beamer slides', icon: Presentation, color: 'text-blue-500', href: '/studio/presentation' },
@@ -52,4 +52,4 @@ const DocumentStudio: React.FC = () => {
     );
 };
 
-export default DocumentStudio;
+export default DocumentStudioHome;

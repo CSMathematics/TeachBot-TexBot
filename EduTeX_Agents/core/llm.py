@@ -175,16 +175,51 @@ class LLMService:
         try:
             return json.loads(cleaned_text)
         except json.JSONDecodeError:
-            print(f"JSON Decode Error. Raw output: {text_response[:100]}...")  # type: ignore
+            print(f"JSON Decode Error. Attempting LaTeX sanitization...")
+            # LaTeX content has backslashes (\int, \geq, \,) that are invalid JSON escapes
+            sanitized = self._sanitize_latex_json(cleaned_text)
+            try:
+                return json.loads(sanitized)
+            except json.JSONDecodeError:
+                pass
             # Attempt to find JSON object in text
             try:
-                start = cleaned_text.find("{")
-                end = cleaned_text.rfind("}") + 1
-                if start != -1 and end != -1:
-                    return json.loads(cleaned_text[start:end])  # type: ignore
+                start = sanitized.find("{")
+                end = sanitized.rfind("}") + 1
+                if start != -1 and end > 0:
+                    return json.loads(sanitized[start:end])
             except:
                 pass
             return {"error": "Invalid JSON", "raw_text": text_response}
+
+    def _sanitize_latex_json(self, text: str) -> str:
+        """
+        Escape backslashes in JSON text that are LaTeX commands.
+        Processes char-by-char to avoid regex escaping issues.
+        Keeps valid JSON escapes (quotes, backslash, slash, b, f, n, r, t, u).
+        """
+        valid_escapes = set('"\\/bfnrtu')
+        result = []
+        i = 0
+        while i < len(text):
+            ch = text[i]
+            if ch == '\\' and i + 1 < len(text):
+                next_ch = text[i + 1]
+                if next_ch in valid_escapes:
+                    # Valid JSON escape - keep as is
+                    result.append(ch)
+                    result.append(next_ch)
+                    i += 2
+                else:
+                    # Invalid escape (LaTeX) - double the backslash
+                    result.append('\\')
+                    result.append('\\')
+                    result.append(next_ch)
+                    i += 2
+            else:
+                result.append(ch)
+                i += 1
+        return ''.join(result)
 
     def _mock_response(self, prompt: str, error: Optional[str] = None) -> str:
         """

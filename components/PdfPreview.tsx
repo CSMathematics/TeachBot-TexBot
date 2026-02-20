@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Exam } from '../types';
 import LatexRenderer from './LatexRenderer';
-import { Eye, EyeOff, Palette, ZoomIn, ZoomOut, Settings, Type, Calendar, User, Layout, Edit3, Save, FileText, Split, Code, Copy } from 'lucide-react';
+import { Eye, EyeOff, Palette, ZoomIn, ZoomOut, Settings, Type, Calendar, User, Layout, Edit3, Save, FileText, Split, Code, Copy, Loader2, Download, AlertTriangle, LayoutTemplate } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { PRESET_COLORS, TemplateConfig } from '../services/templateService';
+import { PRESET_COLORS, TEMPLATE_STYLES, TemplateConfig } from '../services/templateService';
 import { generateLatexFromExam } from '../lib/latexGenerator';
-import { Button, Input, Label, Textarea } from "./ui";
+import { Button, Input, Label, Textarea, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "./ui";
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -36,12 +36,17 @@ const PdfPreview: React.FC<PdfPreviewProps> = ({
   className
 }) => {
   const [solutionsMode, setSolutionsMode] = useState<'none' | 'inline' | 'separate'>('none');
-  const [viewMode, setViewMode] = useState<'preview' | 'code'>('preview');
+  const [viewMode, setViewMode] = useState<'preview' | 'code' | 'pdf'>('preview');
   const [zoom, setZoom] = useState(0.65);
   const [svgContent, setSvgContent] = useState<string | null>(null);
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [latexCode, setLatexCode] = useState("");
   const [paginatedQuestions, setPaginatedQuestions] = useState<Exam['questions'][]>([]);
+
+  // Compilation State
+  const [isCompiling, setIsCompiling] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [compileError, setCompileError] = useState<string | null>(null);
 
   const mainColor = templateConfig?.mainColor || '#1285cc';
 
@@ -101,6 +106,34 @@ const PdfPreview: React.FC<PdfPreviewProps> = ({
   useEffect(() => {
     setLatexCode(generateLatexFromExam(exam, { ...templateConfig!, mainColor }));
   }, [exam, templateConfig, mainColor]);
+
+  // Compilation Handler
+  const handleCompile = async () => {
+    setIsCompiling(true);
+    setCompileError(null);
+    try {
+      const response = await fetch('http://localhost:8000/api/compile-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latexCode }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Compilation failed');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
+      setViewMode('pdf');
+    } catch (error: any) {
+      console.error('Compilation error:', error);
+      setCompileError(error.message || 'An unknown error occurred');
+    } finally {
+      setIsCompiling(false);
+    }
+  };
 
   // Handlers
   const handleColorChange = (color: string) => {
@@ -349,6 +382,44 @@ const PdfPreview: React.FC<PdfPreviewProps> = ({
               )}
             </div>
 
+          ) : viewMode === 'pdf' ? (
+            <div className="w-full h-full bg-gray-900 border border-gray-800 rounded-lg overflow-hidden flex flex-col shadow-2xl">
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700 shrink-0">
+                <span className="text-xs text-gray-400 font-mono">
+                  {pdfUrl ? 'document.pdf' : 'Compiling...'}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 gap-2 text-xs hover:bg-gray-700 text-gray-300"
+                    onClick={() => { if (pdfUrl) window.open(pdfUrl, '_blank') }}
+                    disabled={!pdfUrl}
+                  >
+                    <Download size={12} /> Download
+                  </Button>
+                </div>
+              </div>
+
+              {isCompiling && (
+                <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+                  <p className="text-sm">Compiling LaTeX to PDF...</p>
+                </div>
+              )}
+
+              {!isCompiling && pdfUrl && (
+                <iframe src={pdfUrl} className="w-full h-full border-0 bg-white" title="PDF Preview" />
+              )}
+
+              {!isCompiling && !pdfUrl && !compileError && (
+                <div className="flex-1 flex flex-col items-center justify-center text-gray-500 gap-2">
+                  <FileText className="w-12 h-12 opacity-20" />
+                  <p className="text-sm">No PDF compiled yet.</p>
+                  <Button variant="outline" size="sm" onClick={handleCompile}>Compile Now</Button>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="w-full h-full p-0 bg-gray-900 text-gray-100 font-mono text-sm overflow-hidden rounded-lg shadow-inner flex flex-col">
               <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700 shrink-0">
@@ -405,24 +476,61 @@ const PdfPreview: React.FC<PdfPreviewProps> = ({
 
           <div className="h-px bg-gray-100" />
 
+          {/* Compile Section */}
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={handleCompile}
+                disabled={isCompiling}
+                className={cn("w-full gap-2", isCompiling ? "opacity-80" : "")}
+              >
+                {isCompiling ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Compiling...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4" />
+                    Compile & View PDF
+                  </>
+                )}
+              </Button>
+              <div className="text-[10px] text-gray-400 text-center px-2">
+                Uses local XeLaTeX to generate a real PDF.
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-gray-100" />
+
           {/* View Mode Section */}
           <div className="space-y-3">
             <Label className="text-xs text-muted-foreground uppercase tracking-wider font-bold flex items-center gap-1">
               <Eye className="w-3 h-3" />
               Λειτουργία Προβολής
             </Label>
-            <div className="flex p-1 bg-gray-100 rounded-lg">
+            <div className="grid grid-cols-3 gap-1 p-1 bg-gray-100 rounded-lg">
               <button
                 onClick={() => setViewMode('preview')}
-                className={cn("flex-1 flex items-center justify-center gap-2 text-[10px] font-medium py-1.5 rounded-md transition-all", viewMode === 'preview' ? "bg-white shadow-sm text-black" : "text-gray-500 hover:text-black")}
+                className={cn("flex items-center justify-center gap-2 text-[10px] font-medium py-1.5 rounded-md transition-all", viewMode === 'preview' ? "bg-white shadow-sm text-black" : "text-gray-500 hover:text-black")}
+                title="Interactive HTML Preview"
               >
                 <FileText className="w-3 h-3" /> Preview
               </button>
               <button
                 onClick={() => setViewMode('code')}
-                className={cn("flex-1 flex items-center justify-center gap-2 text-[10px] font-medium py-1.5 rounded-md transition-all", viewMode === 'code' ? "bg-white shadow-sm text-black" : "text-gray-500 hover:text-black")}
+                className={cn("flex items-center justify-center gap-2 text-[10px] font-medium py-1.5 rounded-md transition-all", viewMode === 'code' ? "bg-white shadow-sm text-black" : "text-gray-500 hover:text-black")}
+                title="LaTeX Source Code"
               >
-                <Code className="w-3 h-3" /> LaTeX Class
+                <Code className="w-3 h-3" /> Code
+              </button>
+              <button
+                onClick={() => { if (pdfUrl) setViewMode('pdf'); else handleCompile(); }}
+                className={cn("flex items-center justify-center gap-2 text-[10px] font-medium py-1.5 rounded-md transition-all", viewMode === 'pdf' ? "bg-white shadow-sm text-black" : "text-gray-500 hover:text-black")}
+                title="Compiled PDF View"
+              >
+                <FileText className="w-3 h-3" /> PDF
               </button>
             </div>
           </div>
@@ -467,6 +575,34 @@ const PdfPreview: React.FC<PdfPreviewProps> = ({
           {/* Appearance Section */}
           <div className="space-y-3">
             <Label className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Εμφανιση</Label>
+
+            {/* Template Selector */}
+            <div className="space-y-2">
+              <Label className="text-xs">Template</Label>
+              <div className="grid grid-cols-1 gap-2">
+                {TEMPLATE_STYLES.map((style: any) => (
+                  <button
+                    key={style.id}
+                    onClick={() => onConfigChange?.({ ...templateConfig!, style: style.id })}
+                    className={cn(
+                      "flex items-center p-2 rounded-lg border text-left transition-all",
+                      templateConfig?.style === style.id ? "bg-primary/10 border-primary shadow-sm" : "hover:bg-gray-50 border-transparent hover:border-gray-200"
+                    )}
+                  >
+                    <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center shrink-0 border mr-3" style={{ borderColor: style.previewColor }}>
+                      <LayoutTemplate className="w-4 h-4" style={{ color: style.previewColor }} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold">{style.name}</div>
+                      <div className="text-[10px] text-gray-500 line-clamp-1">{style.description}</div>
+                    </div>
+                    {templateConfig?.style === style.id && <div className="ml-auto w-2 h-2 rounded-full bg-primary" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="h-px bg-gray-100" />
 
             {/* Color Picker */}
             <div className="space-y-2">
@@ -586,6 +722,23 @@ const PdfPreview: React.FC<PdfPreviewProps> = ({
 
         </div>
       </div>
+
+      <Dialog open={!!compileError} onOpenChange={(open) => !open && setCompileError(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Compilation Failed
+            </DialogTitle>
+            <DialogDescription>
+              The LaTeX compiler returned an error. Please check your code.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 bg-gray-950 text-red-400 font-mono text-xs p-4 rounded-md overflow-auto max-h-[60vh] whitespace-pre-wrap">
+            {compileError}
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

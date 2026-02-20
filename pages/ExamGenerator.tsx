@@ -9,11 +9,13 @@ import TopicSelector from '../components/TopicSelector';
 import QuestionTopicList from '../components/QuestionTopicList';
 import PrerequisiteChecker from '../components/PrerequisiteChecker';
 import LatexFixer from '../components/LatexFixer';
-import { Save, Download, ChevronLeft, RefreshCw, Wand2, Copy, Clock, Wrench } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Save, Download, ChevronLeft, RefreshCw, Wand2, Copy, Clock, Wrench, GitBranch } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Button, Input, Select, Label, Card, CardHeader, CardTitle, CardContent, Dialog, DialogContent } from '../components/ui';
 import PdfPreview from '../components/PdfPreview';
 import ExerciseTypeSelector from '../components/ExerciseTypeSelector';
+import MermaidChart from '../components/MermaidChart';
+import { apiGenerateFlowchart } from '../services/agentApiService';
 import DifficultyDistributionSelector from '../components/DifficultyDistributionSelector';
 import { cn } from '../lib/utils';
 import { useGeneratorPipeline } from '../hooks/useGeneratorPipeline';
@@ -23,6 +25,9 @@ import { useToast } from '../components/Toast';
 const ExamGenerator: React.FC = () => {
   const { settings } = useSettings();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const initialStyle = searchParams.get('style') || 'scientific';
+
   const [exam, setExam] = useState<Exam | null>(null);
 
   // Params — use settings defaults
@@ -56,6 +61,8 @@ const ExamGenerator: React.FC = () => {
   const [includeMultiMethod, setIncludeMultiMethod] = useState(false);
   const [style, setStyle] = useState<'standard' | 'panhellenic'>('standard');
   const [exerciseTypes, setExerciseTypes] = useState<ExerciseType[]>([]);
+  const [flowchartData, setFlowchartData] = useState<any>(null);
+  const [flowchartLoading, setFlowchartLoading] = useState(false);
 
 
   // Dynamic agent pipeline based on toggles
@@ -91,7 +98,7 @@ const ExamGenerator: React.FC = () => {
   };
 
   // Shared pipeline hook
-  const pipeline = useGeneratorPipeline(getActiveAgents);
+  const pipeline = useGeneratorPipeline(getActiveAgents, { style: initialStyle });
   const { loading, activeTab, agents, templateConfig, fixerOpen } = pipeline;
 
   const refreshAgents = () => {
@@ -521,6 +528,26 @@ const ExamGenerator: React.FC = () => {
             >
               <Clock size={13} /> Χρόνος
             </button>
+            <button
+              onClick={async () => {
+                pipeline.setActiveTab('flowchart');
+                if (!flowchartData && !flowchartLoading) {
+                  setFlowchartLoading(true);
+                  try {
+                    const currentTopic = useManualTopic ? manualTopic : topic;
+                    const data = await apiGenerateFlowchart({ topic: currentTopic, depth: 2 });
+                    setFlowchartData(data);
+                  } catch (err) {
+                    console.error('Flowchart generation failed:', err);
+                  } finally {
+                    setFlowchartLoading(false);
+                  }
+                }
+              }}
+              className={cn("text-sm font-medium px-3 py-1 rounded-sm transition-all flex items-center gap-1.5", activeTab === 'flowchart' ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
+            >
+              <GitBranch size={13} /> Flowchart
+            </button>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" className="gap-2" disabled={!exam} onClick={() => {
@@ -603,6 +630,52 @@ const ExamGenerator: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <TimeCalibration questions={exam.questions} totalMinutes={duration} />
+              </CardContent>
+            </Card>
+          )}
+
+          {exam && activeTab === 'flowchart' && (
+            <Card className="w-full max-w-4xl h-fit">
+              <CardHeader className="flex flex-row items-center justify-between py-4 border-b">
+                <CardTitle className="flex items-center gap-2 text-base"><GitBranch className="w-5 h-5" /> Flowchart Επίλυσης</CardTitle>
+                <Button variant="outline" size="sm" onClick={async () => {
+                  setFlowchartData(null);
+                  setFlowchartLoading(true);
+                  try {
+                    const currentTopic = useManualTopic ? manualTopic : topic;
+                    const data = await apiGenerateFlowchart({ topic: currentTopic, depth: 2 });
+                    setFlowchartData(data);
+                  } catch (err) { console.error(err); } finally { setFlowchartLoading(false); }
+                }}>
+                  <RefreshCw className={cn("w-4 h-4 mr-2", flowchartLoading && "animate-spin")} /> Regenerate
+                </Button>
+              </CardHeader>
+              <CardContent className="p-6 bg-slate-50 dark:bg-slate-900/50">
+                {flowchartLoading && (
+                  <div className="flex items-center justify-center py-16">
+                    <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+                {!flowchartLoading && flowchartData?.mermaid && (
+                  <MermaidChart chart={flowchartData.mermaid} className="w-full" />
+                )}
+                {!flowchartLoading && flowchartData?.steps?.length > 0 && (
+                  <div className="mt-6 border-t border-border pt-4 space-y-2">
+                    <h4 className="text-sm font-semibold text-muted-foreground">Βήματα Επίλυσης</h4>
+                    {flowchartData.steps.map((step: any, i: number) => (
+                      <div key={i} className="flex gap-2 items-start text-sm">
+                        <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                        <div><span className="font-medium">{step.label}</span>{step.description && <span className="text-muted-foreground"> — {step.description}</span>}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {!flowchartLoading && !flowchartData && (
+                  <div className="text-center py-16 text-muted-foreground">
+                    <GitBranch className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                    <p>Πατήστε το tab ξανά για να δημιουργηθεί flowchart.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

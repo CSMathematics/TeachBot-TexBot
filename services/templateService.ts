@@ -9,6 +9,8 @@ export interface TemplateStyle {
     nameEl: string;
     description: string;
     previewColor: string;
+    image?: string;
+    tags?: string[];
 }
 
 export interface TemplateConfig {
@@ -26,6 +28,8 @@ export const TEMPLATE_STYLES: TemplateStyle[] = [
         nameEl: 'Κλασικό',
         description: 'Centred single-column layout with MathWorld branding',
         previewColor: '#aa1212',
+        image: '/templates/classic-preview.jpg',
+        tags: ['Math', 'Clean'],
     },
     {
         id: 'modern',
@@ -33,6 +37,8 @@ export const TEMPLATE_STYLES: TemplateStyle[] = [
         nameEl: 'Μοντέρνο',
         description: 'Two-column layout with side branding and social links',
         previewColor: '#1285cc',
+        image: '/templates/modern-preview.jpg',
+        tags: ['Elegant', 'Two Column'],
     },
     {
         id: 'scientific',
@@ -40,6 +46,8 @@ export const TEMPLATE_STYLES: TemplateStyle[] = [
         nameEl: 'Επιστημονικό',
         description: 'Grid header with math formulas, decorative squares, two-column body',
         previewColor: '#1285cc',
+        image: '/templates/scientific-preview.jpg',
+        tags: ['Academic', 'Grid'],
     },
 ];
 

@@ -23,11 +23,11 @@ class FixAgent:
     Role: The "LaTeX Fixer"
     Responsibility: Wrapper for the self-healing compilation logic.
     """
-    def __init__(self):
+    def __init__(self, api_key=None):
         self.role = "LaTeX Fixer"
         try:
              from core.llm import LLMService
-             self.llm = LLMService()
+             self.llm = LLMService(api_key=api_key)
         except ImportError:
              self.llm = None
 

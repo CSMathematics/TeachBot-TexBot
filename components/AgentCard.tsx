@@ -1,18 +1,22 @@
 import React from 'react';
-import { Agent, AgentStatus, AgentDomain } from '../types';
+import { Agent, AgentStatus, AgentDomain, AgentCapability } from '../types';
 import {
   Bot, FileText, Brain, CheckCircle, Loader2, Copy, Gauge,
   Lightbulb, AlertTriangle, ClipboardCheck, Network, ListChecks,
   GitBranch, GraduationCap, Shapes, Table, BookMarked,
-  LayoutTemplate, Wrench, FileCheck, Presentation
+  LayoutTemplate, Wrench, FileCheck, Presentation,
+  Zap, Info, ExternalLink, ArrowRight,
 } from 'lucide-react';
-import { Card, CardContent } from './ui';
+import { Card, CardContent, Button } from './ui';
 import { cn } from '../lib/utils';
 
 interface AgentCardProps {
   agent: Agent;
+  agentCapability?: AgentCapability;
   variant?: 'compact' | 'full' | 'working';
   onClick?: () => void;
+  onQuickAction?: () => void;
+  onViewDetails?: () => void;
 }
 
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -38,23 +42,23 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Wrench: <Wrench className="w-5 h-5" />,
 };
 
-const AgentCard: React.FC<AgentCardProps> = ({ agent, variant = 'working', onClick }) => {
+const AgentCard: React.FC<AgentCardProps> = ({ agent, agentCapability, variant = 'working', onClick, onQuickAction, onViewDetails }) => {
   const icon = ICON_MAP[agent.icon] || <Bot className="w-5 h-5" />;
   const isWorking = agent.status === AgentStatus.WORKING;
   const isCompleted = agent.status === AgentStatus.COMPLETED;
   const isError = agent.status === AgentStatus.ERROR;
   const isEducation = agent.domain === AgentDomain.EDUCATION;
+  const qa = agentCapability?.quickAction;
 
   if (variant === 'full') {
     return (
       <Card
         className={cn(
-          "transition-all duration-300 cursor-pointer group hover:shadow-lg hover:-translate-y-1",
-          /* Removed border-border */
+          "transition-all duration-300 group hover:shadow-lg hover:-translate-y-1 flex flex-col",
         )}
-        onClick={onClick}
       >
-        <CardContent className="p-5">
+        <CardContent className="p-5 flex-1 flex flex-col">
+          {/* Top section: icon + info */}
           <div className="flex items-start gap-4">
             <div className={cn(
               "p-3 rounded-xl shrink-0 transition-colors",
@@ -78,6 +82,40 @@ const AgentCard: React.FC<AgentCardProps> = ({ agent, variant = 'working', onCli
               </div>
               <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">{agent.description}</p>
             </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border/30">
+            {qa && (
+              <Button
+                variant="default"
+                size="sm"
+                className="flex-1 gap-1.5 text-xs font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onQuickAction?.();
+                }}
+              >
+                {qa.tryAgent ? (
+                  <Zap className="w-3.5 h-3.5" />
+                ) : (
+                  <ArrowRight className="w-3.5 h-3.5" />
+                )}
+                {qa.labelEl}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewDetails?.();
+              }}
+            >
+              <Info className="w-3.5 h-3.5" />
+              Info
+            </Button>
           </div>
         </CardContent>
       </Card>

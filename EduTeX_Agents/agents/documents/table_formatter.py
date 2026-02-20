@@ -6,11 +6,11 @@ class TableFormatter:
     Role: The "Table Wizard"
     Responsibility: Create complex LaTeX tables.
     """
-    def __init__(self):
+    def __init__(self, api_key=None):
         self.role = "Table Wizard"
         try:
              from core.llm import LLMService
-             self.llm = LLMService()
+             self.llm = LLMService(api_key=api_key)
         except ImportError:
              self.llm = None
 

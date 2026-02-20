@@ -16,6 +16,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         endpoint: '/api/generate-exercises',
         color: '#06b6d4',
         visionAgent: 'B',
+        quickAction: { label: 'Create Exercises', labelEl: 'Δημιουργία Ασκήσεων', route: '/worksheet' },
+        capabilities: [
+            'Δημιουργία ασκήσεων από θεματική ενότητα',
+            'Υποστήριξη πολλαπλών τύπων (θεωρία, εφαρμογή, απόδειξη)',
+            'Αυτόματη ρύθμιση δυσκολίας',
+            'Καθαροί αριθμοί χωρίς δεκαδικά',
+        ],
     },
     {
         id: 'exam-creator',
@@ -29,6 +36,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         endpoint: '/api/generate-exam',
         color: '#0ea5e9',
         visionAgent: 'A',
+        quickAction: { label: 'Create Exam', labelEl: 'Δημιουργία Διαγωνίσματος', route: '/create' },
+        capabilities: [
+            'Συναρμολόγηση πλήρους διαγωνίσματος',
+            'Κατανομή δυσκολίας & βαθμολογίας',
+            'Header με στοιχεία μαθητή',
+            'Εξαγωγή σε LaTeX / PDF',
+        ],
     },
     {
         id: 'solution-writer',
@@ -42,6 +56,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         endpoint: '/api/generate-solutions',
         color: '#10b981',
         visionAgent: 'C',
+        quickAction: { label: 'Generate Solutions', labelEl: 'Δημιουργία Λύσεων', route: '/create' },
+        capabilities: [
+            'Αναλυτική λύση βήμα-βήμα',
+            'Μαθηματική τεκμηρίωση κάθε βήματος',
+            'LaTeX μορφοποίηση',
+            'Επαλήθευση ορθότητας',
+        ],
     },
     {
         id: 'isomorphic-generator',
@@ -55,6 +76,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         endpoint: '/api/generate-variants',
         color: '#8b5cf6',
         visionAgent: 'B',
+        quickAction: { label: 'Create Variants', labelEl: 'Δημιουργία Παραλλαγών', tryAgent: true },
+        capabilities: [
+            'Ισομορφικές παραλλαγές ασκήσεων',
+            'Αλλαγή αριθμών/συντελεστών',
+            'Ομάδα Α / Ομάδα Β',
+            'Ίδια δομή, διαφορετικά δεδομένα',
+        ],
     },
     {
         id: 'difficulty-calibrator',
@@ -68,6 +96,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         endpoint: '/api/calibrate-difficulty',
         color: '#f59e0b',
         visionAgent: 'F',
+        quickAction: { label: 'Calibrate', labelEl: 'Βαθμονόμηση', tryAgent: true },
+        capabilities: [
+            'Ανάλυση κατανομής δυσκολίας',
+            'Πρόταση αναπροσαρμογής',
+            'Στατιστική αξιολόγηση',
+            'Εξισορρόπηση εύκολων/μέτριων/δύσκολων',
+        ],
     },
     {
         id: 'hint-generator',
@@ -81,6 +116,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         endpoint: '/api/generate-hints',
         color: '#eab308',
         visionAgent: 'I',
+        quickAction: { label: 'Generate Hints', labelEl: 'Δημιουργία Υποδείξεων', tryAgent: true },
+        capabilities: [
+            'Κλιμακωτές υποδείξεις (3 επίπεδα)',
+            'Ιδέα → Μεθοδολογία → Κοντά στη λύση',
+            'Παιδαγωγική σχεδίαση',
+            'Αποφυγή αποκάλυψης πλήρους λύσης',
+        ],
     },
     {
         id: 'pitfall-detector',
@@ -94,6 +136,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         endpoint: '/api/detect-pitfalls',
         color: '#ef4444',
         visionAgent: 'H',
+        quickAction: { label: 'Detect Pitfalls', labelEl: 'Εντοπισμός Παγίδων', tryAgent: true },
+        capabilities: [
+            'Πρόβλεψη συνηθισμένων λαθών',
+            'Σημεία που κολλάνε μαθητές',
+            'Προτάσεις αποφυγής',
+            'Ανάλυση ανά θεματική ενότητα',
+        ],
     },
     {
         id: 'rubric-designer',
@@ -107,18 +156,32 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         endpoint: '/api/generate-rubric',
         color: '#14b8a6',
         visionAgent: 'J',
+        quickAction: { label: 'Create Rubric', labelEl: 'Δημιουργία Κριτηρίων', tryAgent: true },
+        capabilities: [
+            'Αναλυτικά κριτήρια ανά ερώτηση',
+            'Κατανομή μονάδων',
+            'Μερική βαθμολόγηση',
+            'Εξαγωγή σε LaTeX',
+        ],
     },
     {
-        id: 'mindmap-generator',
-        name: 'Mindmap Generator',
-        nameEl: 'Γεννήτρια Εννοιολογικών Χαρτών',
-        role: 'Generating Mindmaps',
-        description: 'Creates concept maps for topic visualization',
-        descriptionEl: 'Δημιουργεί εννοιολογικούς χάρτες',
+        id: 'flowchart-generator',
+        name: 'Flowchart Generator',
+        nameEl: 'Γεννήτρια Διαγραμμάτων Ροής',
+        role: 'Generating solution flowcharts',
+        description: 'Creates step-by-step solution flowcharts for exercise methods',
+        descriptionEl: 'Δημιουργεί διαγράμματα ροής επίλυσης ασκήσεων',
         domain: AgentDomain.EDUCATION,
-        icon: 'Network',
-        endpoint: '/api/generate-mindmap',
+        icon: 'GitBranch',
+        endpoint: '/api/generate-flowchart',
         color: '#a855f7',
+        quickAction: { label: 'Create Flowchart', labelEl: 'Δημιουργία Flowchart', route: '/flowchart' },
+        capabilities: [
+            'Διαγράμματα ροής μεθόδων επίλυσης',
+            'Βήμα-βήμα απεικόνιση αποφάσεων',
+            'Υποστήριξη πολλαπλών μεθόδων ανά θέμα',
+            'Ενσωμάτωση σε Exam & Worksheet Generator',
+        ],
     },
     {
         id: 'prerequisite-checker',
@@ -131,6 +194,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         icon: 'ListChecks',
         endpoint: '/api/check-prerequisites',
         color: '#64748b',
+        quickAction: { label: 'Check Prerequisites', labelEl: 'Έλεγχος Προαπαιτουμένων', tryAgent: true },
+        capabilities: [
+            'Εντοπισμός προαπαιτούμενων γνώσεων',
+            'Δέντρο εξαρτήσεων θεματικής',
+            'Πρόταση σειράς διδασκαλίας',
+            'Ανά τάξη/επίπεδο',
+        ],
     },
     {
         id: 'multi-method-solver',
@@ -143,6 +213,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         icon: 'GitBranch',
         endpoint: '/api/multi-method-solve',
         color: '#6366f1',
+        quickAction: { label: 'Multi-Method Solve', labelEl: 'Πολυμεθοδική Λύση', tryAgent: true },
+        capabilities: [
+            'Επίλυση με 2-3 διαφορετικές μεθόδους',
+            'Σύγκριση προσεγγίσεων',
+            'Ανάδειξη πλεονεκτημάτων κάθε μεθόδου',
+            'Παιδαγωγική αξιοποίηση',
+        ],
     },
     {
         id: 'panhellenic-formatter',
@@ -156,6 +233,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         endpoint: '/api/format-panhellenic',
         color: '#0284c7',
         visionAgent: 'G',
+        quickAction: { label: 'Format Panhellenic', labelEl: 'Μορφή Πανελληνίων', tryAgent: true },
+        capabilities: [
+            'Μορφοποίηση σε στυλ Πανελληνίων Εξετάσεων',
+            'Σωστή δομή (Θέμα Α, Β, Γ, Δ)',
+            'Μονάδες βαθμολόγησης',
+            'Τυπική κεφαλίδα ΥΠΑΙΘΠΑ',
+        ],
     },
 
     // ── Documents Domain (7 Agents) ───────────────────────────────────
@@ -171,6 +255,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         endpoint: '/api/build-document',
         color: '#f97316',
         visionAgent: 'D',
+        quickAction: { label: 'Create Document', labelEl: 'Δημιουργία Εγγράφου', route: '/studio/document' },
+        capabilities: [
+            'Άρθρα, αναφορές, βιβλία',
+            'CV και επιστολές',
+            'Πλήρης LaTeX μορφοποίηση',
+            'Πολυγλωσσική υποστήριξη',
+        ],
     },
     {
         id: 'tikz-expert',
@@ -183,6 +274,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         icon: 'Shapes',
         endpoint: '/api/generate-figure',
         color: '#fb923c',
+        quickAction: { label: 'Create Figure', labelEl: 'Δημιουργία Σχήματος', route: '/studio/figure' },
+        capabilities: [
+            'Γεωμετρικά σχήματα',
+            'Γραφήματα συναρτήσεων (PGFPlots)',
+            'Διαγράμματα ροής',
+            'Κυκλώματα & δέντρα',
+        ],
     },
     {
         id: 'table-formatter',
@@ -195,6 +293,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         icon: 'Table',
         endpoint: '/api/format-table',
         color: '#ea580c',
+        quickAction: { label: 'Create Table', labelEl: 'Δημιουργία Πίνακα', route: '/studio/table' },
+        capabilities: [
+            'Επαγγελματικοί πίνακες (booktabs)',
+            'Αυτόματο styling',
+            'Import από CSV/δεδομένα',
+            'Merge cells & multirow',
+        ],
     },
     {
         id: 'beamer-creator',
@@ -207,6 +312,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         icon: 'Presentation',
         endpoint: '/api/create-presentation',
         color: '#d97706',
+        quickAction: { label: 'Create Presentation', labelEl: 'Δημιουργία Παρουσίασης', route: '/studio/presentation' },
+        capabilities: [
+            'Beamer slides με θέματα',
+            'Αυτόματη δομή παρουσίασης',
+            'Animations & overlays',
+            'Math-ready formatting',
+        ],
     },
     {
         id: 'bibliography-manager',
@@ -219,6 +331,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         icon: 'BookMarked',
         endpoint: '/api/manage-bibliography',
         color: '#c2410c',
+        quickAction: { label: 'Manage Bibliography', labelEl: 'Βιβλιογραφία', route: '/studio/bibliography' },
+        capabilities: [
+            'Διαχείριση BibTeX entries',
+            'APA, IEEE, Chicago styles',
+            'Αυτόματη μορφοποίηση',
+            'Import από DOI/URL',
+        ],
     },
     {
         id: 'template-curator',
@@ -231,6 +350,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         icon: 'LayoutTemplate',
         endpoint: '/api/manage-templates',
         color: '#9a3412',
+        quickAction: { label: 'Browse Templates', labelEl: 'Πρότυπα', route: '/studio/template' },
+        capabilities: [
+            'Βιβλιοθήκη προτύπων LaTeX',
+            'Classic, Modern, Scientific στυλ',
+            'Customization χρωμάτων',
+            'Εφαρμογή σε έγγραφα/διαγωνίσματα',
+        ],
     },
     {
         id: 'fix-agent',
@@ -243,6 +369,13 @@ export const AGENT_REGISTRY: AgentCapability[] = [
         icon: 'Wrench',
         endpoint: '/api/fix-latex',
         color: '#b91c1c',
+        quickAction: { label: 'Fix LaTeX', labelEl: 'Διόρθωση LaTeX', tryAgent: true },
+        capabilities: [
+            'Διάγνωση σφαλμάτων compilation',
+            'Αυτόματη διόρθωση κώδικα',
+            'Εντοπισμός missing packages',
+            'Πρόταση εναλλακτικών λύσεων',
+        ],
     },
 ];
 

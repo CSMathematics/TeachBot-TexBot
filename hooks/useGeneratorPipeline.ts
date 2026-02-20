@@ -8,7 +8,7 @@ import { saveExam } from '../services/storageService';
 
 export interface GeneratorState {
     loading: boolean;
-    activeTab: 'preview' | 'code' | 'time';
+    activeTab: 'preview' | 'code' | 'time' | 'flowchart';
     agents: Agent[];
     templateConfig: TemplateConfig;
     fixerOpen: boolean;
@@ -36,12 +36,13 @@ export interface GeneratorActions {
 // ── Hook ─────────────────────────────────────────────────────────────
 
 export function useGeneratorPipeline(
-    initialAgents: () => Agent[]
+    initialAgents: () => Agent[],
+    initialConfig?: Partial<TemplateConfig>
 ): GeneratorState & GeneratorActions {
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<GeneratorState['activeTab']>('preview');
     const [agents, setAgents] = useState<Agent[]>(initialAgents);
-    const [templateConfig, setTemplateConfig] = useState<TemplateConfig>(DEFAULT_TEMPLATE_CONFIG);
+    const [templateConfig, setTemplateConfig] = useState<TemplateConfig>({ ...DEFAULT_TEMPLATE_CONFIG, ...initialConfig });
     const [fixerOpen, setFixerOpen] = useState(false);
 
     // ── LaTeX utilities ─────────────────────────────────────────────

@@ -337,7 +337,7 @@ const Dashboard: React.FC = () => {
         <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>Κάλυψη Ύλης</CardTitle>
-            <CardDescription>Heatmap ασκήσεων ανά θέμα × μήνα (Demo Data)</CardDescription>
+            <CardDescription>Heatmap εγγράφων ανά μήνα</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
